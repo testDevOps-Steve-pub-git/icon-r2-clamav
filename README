@@ -1,0 +1,7 @@
+To run with automatic updates of virus definitions:
+cp docker-entrypoint-with-updates.sh docker-entrypoint.sh
+
+To run wihtout updates:
+cp docker-entrypoint-no-updates.sh  docker-entrypoint.sh
+
+New definitions are always retrieved when the container is built.

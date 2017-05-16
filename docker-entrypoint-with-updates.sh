@@ -3,6 +3,7 @@
 set -m
 
 # start in background
+freshclam -d &
 clamd &
 
 # recognize PIDs
