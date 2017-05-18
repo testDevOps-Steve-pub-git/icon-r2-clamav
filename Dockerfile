@@ -31,14 +31,14 @@ RUN mkdir /var/run/clamav && \
 
 # av configuration update
 RUN sed -i 's/^Foreground .*$/Foreground true/g' /etc/clamav/clamd.conf && \
-    echo "TCPSocket 3310" >> /etc/clamav/clamd.conf && \
+    echo "TCPSocket 443" >> /etc/clamav/clamd.conf && \
     sed -i 's/^Foreground .*$/Foreground true/g' /etc/clamav/freshclam.conf
 
 # volume provision
 VOLUME ["/var/lib/clamav"]
 
 # port provision
-EXPOSE 3310
+EXPOSE 443
 
 COPY docker-entrypoint.sh /
 RUN chmod a+x /docker-entrypoint.sh
