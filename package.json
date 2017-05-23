@@ -1,0 +1,9 @@
+{
+	"name": "node-clamav",
+	"version": "1.0.0",
+	"private": true,
+	"dependencies": {
+		"busboy": "0.2.9",
+		"clamav.js":"0.12.0"
+	}
+}
