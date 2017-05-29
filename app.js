@@ -167,11 +167,8 @@ server.listen(8080)
 
 
 
-let base =  process.env.BASE || "/tmp/app/clamav/bin/"
-let clamdBase = process.env.CLAMDBASE || "/tmp/app/clamav/sbin/"
-
-
-
+let base = config.base.freshclam
+let clamdBase = config.base.clamd 
 
 // setup clamd
 var clamdMonitor = () => {

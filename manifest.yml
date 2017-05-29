@@ -3,8 +3,4 @@ applications:
 - name:    qeqweqwe-qwe
   host:     qeqweqwe-qwe
   memory:  1024M
-  env:
-    BASE : '/home/vcap/clamav/bin/'
-    CLAMDBASE: '/home/vcap/clamav/sbin/'
-
   buildpack: https://github.com/Shifeng-ON/nodejs-buildpack.git
