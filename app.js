@@ -57,7 +57,12 @@ var scan = (each) => {
 
 var server = http.createServer((request, response) => {
 	var hasFile = false
-	if (request.url === '/' && request.method === 'GET') {
+	if(request.url === '/' && request.method === 'GET'){
+		response.writeHead(200, { 'Content-Type': 'application/json' });
+		response.write("{'message':'server is alive'}")
+		response.end();
+	}
+	else if (request.url === '/ping' && request.method === 'GET') {
 		console.log("Pinning request was submitted, processing .....")
 		ping().then(
 			(result) => {
@@ -140,10 +145,15 @@ server.listen(8080)
 
 
 
+let base = "/tmp/app/clamav/bin/"
+let clamdBase = "/tmp/app/clamav/sbin/"
 
 
-var clamdMonitor = (clamd, relive) => {
 
+
+// setup clamd
+var clamdMonitor = () => {
+	var clamd = spawn( clamdBase +'clamd')
 	console.log("starting clamav deamon")
 	clamd.on('error', (error) => {
 		console.log("error initializing clamav deamon, shutting down node js http layer",error)
@@ -151,32 +161,42 @@ var clamdMonitor = (clamd, relive) => {
 	})
 	clamd.on('exit', (code, signal) => {
 		console.log('clamd exited, respawning clamd')
-		relive()
+		clamdMonitor()
 
 	})
 
 	clamd.on('close', (code, signal) => {
 		console.log('clamd exited, respawning clamd')
-		relive()
+		clamdMonitor()
 	})
 }
-let base = "/home/vcap/app/clamav/bin/"
-let clamdBase = "/home/vcap/app/clamav/sbin/"
 
-var clamd = spawn( clamdBase +'clamd')
 
-clamdMonitor(clamd, () => {
-	clamd = spawn( clamdBase +'clamd')
+
+
+// set up freshclam
+
+let freshclam = spawn(base + 'freshclam')
+freshclam.on('error', (error) => {
+	console.log("error creating freshclam, unable to get new virus definitions",error)
+	process.exit(1)
 })
+freshclam.on('exit', (code, signal) => {
+	console.log('virus signature database updated succeffully')
 
-setInterval(() => {
+	console.log('schedule freshclam')
+	setInterval(() => {
 	let freshclam = spawn(base + 'freshclam')
 
-	freshclam.on('error', (error) => {
-		console.log("error creating freshclam, unable to get new virus definitions")
-	})
-	freshclam.on('exit', (code, signal) => {
-		console.log('freshclam started succeffully')
+		freshclam.on('error', (error) => {
+			console.log("error creating freshclam, unable to get new virus definitions",error)
+		})
+		freshclam.on('exit', (code, signal) => {
+			console.log('freshclam started succeffully')
 
-	})
-}, 3600000)
+		})
+	}, 3600000)
+	console.log('starring clamav daemon')
+	clamdMonitor()
+})
+
