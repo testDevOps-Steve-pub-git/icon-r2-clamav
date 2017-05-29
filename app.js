@@ -1,6 +1,7 @@
 var http = require('http'),
 	Busboy = require('busboy'),
 	spawn = require('child_process').spawn,
+	exec = require('child_process').exec,
 	clamav = require('clamav.js');
 	config = require("./config.js");
 
@@ -145,7 +146,7 @@ var clamdMonitor = (clamd, relive) => {
 
 	console.log("starting clamav deamon")
 	clamd.on('error', (error) => {
-		console.log("error initializing clamav deamon, shutting down node js http layer")
+		console.log("error initializing clamav deamon, shutting down node js http layer",error)
 		process.exit(1)
 	})
 	clamd.on('exit', (code, signal) => {
@@ -159,16 +160,17 @@ var clamdMonitor = (clamd, relive) => {
 		relive()
 	})
 }
+let base = "/home/vcap/app/clamav/bin/"
+let clamdBase = "/home/vcap/app/clamav/sbin/"
 
-
-var clamd = spawn('clamd')
+var clamd = spawn( clamdBase +'clamd')
 
 clamdMonitor(clamd, () => {
-	clamd = spawn('clamd')
+	clamd = spawn( clamdBase +'clamd')
 })
 
 setInterval(() => {
-	let freshclam = spawn('freshclam')
+	let freshclam = spawn(base + 'freshclam')
 
 	freshclam.on('error', (error) => {
 		console.log("error creating freshclam, unable to get new virus definitions")
