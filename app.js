@@ -7,13 +7,13 @@ var http = require('http'),
 	fs = require('fs');
 
 var scan_html = undefined
-fs.readFile('./scan.html',(err,data)=>{
-			if(err){
-				console.log('missing scan html page, client will not be ablt to get scanning page')
-			}else{
-				scan_html = data
-			}
-			
+fs.readFile('./scan.html', (err, data) => {
+	if (err) {
+		console.log('missing scan html page, client will not be ablt to get scanning page')
+	} else {
+		scan_html = data
+	}
+
 })
 
 
@@ -47,20 +47,17 @@ var version = () => {
 var scan = (each) => {
 	console.log("scanning file: " + each.filename)
 	return new Promise((resolve, reject) => {
-		ping().then((result) => {
-			clamav.createScanner(config.clamav.port, config.clamav.endPoint).scan(each.fileStream, (err, object, malicious) => {
 
-				if (err) {
-					reject({ 'result': "error occurs while scanning: " + each.filename, 'error': JSON.stringify(err), "code": 500 })
-				} else if (malicious) {
-					resolve({ 'result': malicious + " found in file: " + each.filename, 'virus': malicious, "code": 406 })
-				} else {
-					resolve({ 'result': "No virus found in the file: " + each.filename, "code": 200 })
-				}
+		clamav.createScanner(config.clamav.port, config.clamav.endPoint).scan(each.fileStream, (err, object, malicious) => {
 
-			})
-		}, (reason) => {
-			reject(reason)
+			if (err) {
+				reject({ 'result': "error occurs while scanning: " + each.filename, 'error': JSON.stringify(err), "code": 500 })
+			} else if (malicious) {
+				resolve({ 'result': malicious + " found in file: " + each.filename, 'virus': malicious, "code": 406 })
+			} else {
+				resolve({ 'result': "No virus found in the file: " + each.filename, "code": 200 })
+			}
+
 		})
 	})
 
@@ -68,6 +65,8 @@ var scan = (each) => {
 }
 
 var server = http.createServer((request, response) => {
+
+
 	var hasFile = false
 	if (request.url === '/' && request.method === 'GET') {
 		response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -81,7 +80,7 @@ var server = http.createServer((request, response) => {
 				response.writeHead(200, { 'Content-Type': 'application/json' });
 				response.write(result)
 				response.end();
-				
+
 			}, (reason) => {
 				response.writeHead(404, { 'Content-Type': 'application/json' })
 				response.write(reason)
@@ -128,33 +127,48 @@ var server = http.createServer((request, response) => {
 		busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
 
 			hasFile = true
-			scan({ "filename": filename, "fileStream": file }).then(result => {
+			ping().then((result) => {
+				scan({ "filename": filename, "fileStream": file }).then(result => {
 
-				response.writeHead(result.code, { 'Content-Type': 'application/json' });
-				response.write(JSON.stringify({ message: result.result }))
-				response.end()
-			}, reason => {
+					response.writeHead(result.code, { 'Content-Type': 'application/json' });
+					response.write(JSON.stringify({ message: result.result }))
+					response.end()
+				}, reason => {
+					response.writeHead(reason.code, { 'Content-Type': 'application/json' });
+					response.write(JSON.stringify({ message: reason.result }))
+					response.end()
+				})
+			}, (reason) => {
+				var total = 0
+				file.on('data', (data) => {
+					total += data.length
+				})
 
-				response.writeHead(reason.code, { 'Content-Type': 'application/json' });
-				response.write(JSON.stringify({ message: reason.result }))
-				response.end()
+				file.on('end', () => {
+					console.log("Clamav is unavailible, " + total + " bytes of data was discard ")
+					response.writeHead(503, { 'Content-Type': 'application/json' });
+					response.write(reason)
+					response.end()
+				})
+
 			})
+
 
 		});
 
 		request.pipe(busboy)
-	} else if(request.url === '/scan' && request.method === 'GET'){
-	
-		if(scan_html!=undefined){
-			response.writeHead(200,{'Content-Type': 'text/html'});
+	} else if (request.url === '/scan' && request.method === 'GET') {
+
+		if (scan_html != undefined) {
+			response.writeHead(200, { 'Content-Type': 'text/html' });
 			response.write(scan_html)
 			response.end()
-		
-		}else{
-			response.writeHead(200,{'Content-Type': 'text/html'});
+
+		} else {
+			response.writeHead(200, { 'Content-Type': 'text/html' });
 			response.end()
 		}
-	}else {
+	} else {
 		response.writeHead(400);
 		response.end();
 		console.log('Invalid action: ' + request.url);

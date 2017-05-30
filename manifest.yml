@@ -1,6 +1,6 @@
 ---
 applications:
-- name:    qeqweqwe-qwe
-  host:     qeqweqwe-qwe
+- name:    clam_cf
+  host:     clam-cf
   memory:  1024M
   buildpack: https://github.com/Shifeng-ON/nodejs-buildpack.git
