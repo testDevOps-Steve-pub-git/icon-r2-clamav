@@ -4,8 +4,8 @@ var http = require('http'),
 	exec = require('child_process').exec,
 	clamav = require('clamav.js'),
 	config = require("./config.js"),
-	fs = require('fs');
-
+	fs = require('fs'),
+	guid = require('guid');
 var scan_html = undefined
 fs.readFile('./scan.html', (err, data) => {
 	if (err) {
@@ -15,14 +15,17 @@ fs.readFile('./scan.html', (err, data) => {
 	}
 
 })
-
+var fileDir = '/tmp/files'
+if (!fs.existsSync(fileDir)) {
+	fs.mkdirSync(fileDir);
+}
 
 var ping = () => {
 	console.log("Pinning clamav daemon")
 	return new Promise((resolve, reject) => {
 		clamav.ping(config.clamav.port, config.clamav.endPoint, config.clamav.timeout, (err) => {
 			if (err) {
-				reject("{'message': 'Cant not reach clamav deamon ' }")
+				reject("{'message': 'Cant not reach clamav deamon:" + err + "'}")
 			} else {
 				resolve("{ 'message': 'Clamav daemon is alive '}")
 			}
@@ -35,7 +38,7 @@ var version = () => {
 	return new Promise((resolve, reject) => {
 		clamav.version(config.clamav.port, config.clamav.endPoint, config.clamav.timeout, (err, version) => {
 			if (err) {
-				reject("{'message': 'Cant not reach clamav deamon' }")
+				reject("{'message': 'Cant not reach clamav deamon:" + err + "'}")
 			} else {
 				resolve("{'message':'clamav deamon version is " + version + "'}")
 			}
@@ -48,12 +51,12 @@ var scan = (each) => {
 	console.log("scanning file: " + each.filename)
 	return new Promise((resolve, reject) => {
 
-		clamav.createScanner(config.clamav.port, config.clamav.endPoint).scan(each.fileStream, (err, object, malicious) => {
+		clamav.createScanner(config.clamav.port, config.clamav.endPoint).scan(each.filepath, (err, object, malicious) => {
 
 			if (err) {
-				reject({ 'result': "error occurs while scanning: " + each.filename, 'error': JSON.stringify(err), "code": 500 })
+				reject({ 'result': err , "code": 500 })
 			} else if (malicious) {
-				resolve({ 'result': malicious + " found in file: " + each.filename, 'virus': malicious, "code": 406 })
+				resolve({ 'result': malicious + " found in file: " + each.filename, "code": 406 })
 			} else {
 				resolve({ 'result': "No virus found in the file: " + each.filename, "code": 200 })
 			}
@@ -103,60 +106,82 @@ var server = http.createServer((request, response) => {
 		})
 	}
 	else if (request.url === '/scan' && request.method === 'POST') {
+		var temp = undefined
 		console.log("Scanning request was submitted, processing .....")
-		var busboy = new Busboy({ 'headers': request.headers, limits: { files: 1 } });
+
 		request.on('close', function () {
 			console.log("client unexpectedly drop connection")
+			if(temp != undefined){
+				fs.unlinkSync(temp)
+			}
 			response.writeHead(400);
 			response.end();
 
 		});
 
-		request.on('end', () => {
-			if (!hasFile) {
-				console.log("bad request")
-				response.writeHead(400);
-				response.end();
-			} else {
-				console.log("request completed, processing file")
-			}
+		ping().then((result) => {
 
+			var busboy = new Busboy({ 'headers': request.headers, limits: { files: 1 } });
+			busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+				temp = fileDir + '/' + guid.raw()
+				file.on('data', (data) => {
+					fs.appendFileSync(temp, data)
+				})
+
+
+				file.on('end', () => {
+					if (fs.existsSync(temp)) {
+						hasFile = true
+						console.log("got file:" + filename + ", saved into " + temp)
+						ping().then((result) => {
+							scan({ "filename": filename, "filepath": temp }).then(result => {
+								fs.unlinkSync(temp)
+								response.writeHead(result.code, { 'Content-Type': 'application/json' });
+								response.write(JSON.stringify({ message: result.result }))
+								response.end()
+							}, reason => {
+								fs.unlinkSync(temp)
+								response.writeHead(reason.code, { 'Content-Type': 'application/json' });
+								response.write(JSON.stringify({ message: reason.result }))
+								response.end()
+							})
+						}, (reason) => {
+							fs.unlinkSync(temp)
+							response.writeHead(503, { 'Content-Type': 'application/json' });
+							response.write(reason)
+							response.end()
+
+
+						})
+					}
+
+				})
+
+
+
+			});
+		
+			busboy.on('finish', function () {
+				if (!hasFile) {
+					console.log('bad request');
+					response.writeHead(400, { 'Content-Type': 'application/json' });
+					response.write("{messege:'no file was submitted'}")
+					response.end()
+				} else {
+					console.log("done parse file")
+				}
+
+			});
+			request.pipe(busboy)
+		}, (reason) => {
+			response.writeHead(503, { 'Content-Type': 'application/json' });
+			response.write(reason)
+			response.end()
 		})
 
 
-		busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
-
-			hasFile = true
-			ping().then((result) => {
-				scan({ "filename": filename, "fileStream": file }).then(result => {
-
-					response.writeHead(result.code, { 'Content-Type': 'application/json' });
-					response.write(JSON.stringify({ message: result.result }))
-					response.end()
-				}, reason => {
-					response.writeHead(reason.code, { 'Content-Type': 'application/json' });
-					response.write(JSON.stringify({ message: reason.result }))
-					response.end()
-				})
-			}, (reason) => {
-				var total = 0
-				file.on('data', (data) => {
-					total += data.length
-				})
-
-				file.on('end', () => {
-					console.log("Clamav is unavailible, " + total + " bytes of data was discard ")
-					response.writeHead(503, { 'Content-Type': 'application/json' });
-					response.write(reason)
-					response.end()
-				})
-
-			})
 
 
-		});
-
-		request.pipe(busboy)
 	} else if (request.url === '/scan' && request.method === 'GET') {
 
 		if (scan_html != undefined) {
@@ -179,105 +204,109 @@ var server = http.createServer((request, response) => {
 
 server.listen(8080)
 
+if (config.clamav.endPoint == "127.0.0.1") {
+
+	let base = '/home/vcap/app/clamav/bin/'
+	let clamdBase = '/home/vcap/app/clamav/sbin/'
+
+	// setup clamd
+	var clamdMonitor = () => {
+		var clamd = spawn(clamdBase + 'clamd')
+		console.log("starting clamav deamon")
+		clamd.on('error', (error) => {
+			console.log("error initializing clamav deamon, shutting down node js http layer", error)
+			process.exit(1)
+		})
+		clamd.on('exit', (code, signal) => {
+			if (code != 0) {
+				console.log('clamd exited, respawning clamd')
+				clamdMonitor()
+			}
 
 
-let base = config.base.freshclam
-let clamdBase = config.base.clamd 
+		})
 
-// setup clamd
-var clamdMonitor = () => {
-	var clamd = spawn(clamdBase + 'clamd')
-	console.log("starting clamav deamon")
-	clamd.on('error', (error) => {
-		console.log("error initializing clamav deamon, shutting down node js http layer", error)
-		process.exit(1)
-	})
-	clamd.on('exit', (code, signal) => {
-		if (code != 0) {
-			console.log('clamd exited, respawning clamd')
-			clamdMonitor()
-		}
+		clamd.on('close', (code, signal) => {
+			if (code != 0) {
+				console.log('clamd exited, respawning clamd')
+				clamdMonitor()
+			}
 
+		})
+		clamd.stderr.on('data', (err) => {
 
-	})
+			console.log(JSON.stringify({ process_type: 'Clam daemon', messege: err.toString('utf8'), severity: 'Error' }))
+		})
 
-	clamd.on('close', (code, signal) => {
-		if (code != 0) {
-			console.log('clamd exited, respawning clamd')
-			clamdMonitor()
-		}
+		clamd.stdout.on('data', (data) => {
 
-	})
-	clamd.stderr.on('data', (err) => {
+			console.log(JSON.stringify({ process_type: 'Clam daemon', messege: data.toString('utf8'), severity: 'Info' }))
+		})
 
-		console.log(JSON.stringify({ process_type: 'Clam daemon', messege: err.toString('utf8'), severity: 'Error' }))
-	})
-
-	clamd.stdout.on('data', (data) => {
-
-		console.log(JSON.stringify({ process_type: 'Clam daemon', messege: data.toString('utf8'), severity: 'Info' }))
-	})
-
-}
-
-
-
-
-// set up freshclam
-
-let freshclam = spawn(base + 'freshclam')
-freshclam.on('error', (error) => {
-	console.log("error creating freshclam, unable to get new virus definitions", error)
-	process.exit(1)
-})
-
-freshclam.stderr.on('data', (err) => {
-
-	console.log(JSON.stringify({ process_type: 'Virus database update', messege: err.toString('utf8'), severity: 'Error' }))
-})
-
-freshclam.stdout.on('data', (data) => {
-
-	console.log(JSON.stringify({ process_type: 'Virus database update', messege: data.toString('utf8'), severity: 'Info' }))
-})
-
-
-freshclam.on('exit', (code, signal) => {
-	if (code == 0) {
-		console.log('virus signature database updated succeffully')
-
-		console.log('schedule freshclam')
-		setInterval(() => {
-			let freshclam = spawn(base + 'freshclam')
-
-			freshclam.on('error', (error) => {
-				console.log("error creating freshclam, unable to get new virus definitions", error)
-			})
-			freshclam.on('exit', (code, signal) => {
-				if (code == 0) {
-					console.log('freshclam started succeffully')
-				} else {
-					console.log('freshclam exits with code:' + code)
-				}
-
-
-			})
-
-			freshclam.stderr.on('data', (err) => {
-
-				console.log(JSON.stringify({ process_type: 'Virus database update', messege: err.toString('utf8'), severity: 'Error' }))
-			})
-
-			freshclam.stdout.on('data', (data) => {
-
-				console.log(JSON.stringify({ process_type: 'Virus database update', messege: data.toString('utf8'), severity: 'Info' }))
-			})
-
-
-		}, 3600000)
-		console.log('starting clamav daemon')
-		clamdMonitor()
 	}
 
-})
+
+
+
+	// set up freshclam
+
+	let freshclam = spawn(base + 'freshclam')
+	freshclam.on('error', (error) => {
+		console.log("error creating freshclam, unable to get new virus definitions", error)
+		process.exit(1)
+	})
+
+	freshclam.stderr.on('data', (err) => {
+
+		console.log(JSON.stringify({ process_type: 'Virus database update', messege: err.toString('utf8'), severity: 'Error' }))
+	})
+
+	freshclam.stdout.on('data', (data) => {
+
+		console.log(JSON.stringify({ process_type: 'Virus database update', messege: data.toString('utf8'), severity: 'Info' }))
+	})
+
+
+	freshclam.on('exit', (code, signal) => {
+		if (code == 0) {
+			console.log('virus signature database updated succeffully')
+
+			console.log('schedule freshclam')
+			setInterval(() => {
+				let freshclam = spawn(base + 'freshclam')
+
+				freshclam.on('error', (error) => {
+					console.log("error creating freshclam, unable to get new virus definitions", error)
+				})
+				freshclam.on('exit', (code, signal) => {
+					if (code == 0) {
+						console.log('freshclam started succeffully')
+					} else {
+						console.log('freshclam exits with code:' + code)
+					}
+
+
+				})
+
+				freshclam.stderr.on('data', (err) => {
+
+					console.log(JSON.stringify({ process_type: 'Virus database update', messege: err.toString('utf8'), severity: 'Error' }))
+				})
+
+				freshclam.stdout.on('data', (data) => {
+
+					console.log(JSON.stringify({ process_type: 'Virus database update', messege: data.toString('utf8'), severity: 'Info' }))
+				})
+
+
+			}, 3600000)
+			console.log('starting clamav daemon')
+			clamdMonitor()
+		}
+
+	})
+
+
+
+}
 

@@ -8,7 +8,8 @@
   	},
 	"dependencies": {
 		"busboy": "0.2.9",
-		"clamav.js":"0.12.0"
+		"clamav.js":"0.12.0",
+		"guid":"0.0.12"
 	},
 	 "engines": {
     "node": "6.10.3",
