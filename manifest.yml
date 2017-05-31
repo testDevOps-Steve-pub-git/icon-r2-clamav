@@ -1,6 +1,6 @@
 ---
 applications:
 - name:    clam_cf
-  host:     clam-cf
+  host:     clam-cf-uat
   memory:  1024M
   buildpack: https://github.com/Shifeng-ON/nodejs-buildpack.git
