@@ -1,6 +1,6 @@
 Package info:
 
-This package is a Node.js wrapper around the Clamav Daemon.
+This package is a Node.js wrapper around the Clamav Daemon, it will only work on diego cloud foundry!
 
 It uses a custom node.js Buildpack which handles the underlaying clamav.(see detail below)
 
