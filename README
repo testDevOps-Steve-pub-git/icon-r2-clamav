@@ -1,10 +1,10 @@
 This package is a Node.js wrapper around the Clamav Daemon.
 
-It uses a custom node.js Buildpack which handles building of the underlaying clamav.
+It uses a custom node.js Buildpack which handles the underlaying clamav.
 
 Custom Node.js buildpack:https://github.com/Shifeng-ON/nodejs-buildpack.git
 
-HTTP server will accept a single file per request at '/scan' endpoint, and return scan result in HTTP status code
+HTTP server will accept a single file per 'POST' request at '/scan' endpoint, and return scan result in HTTP status code
 
 200 => No virus found.
 
@@ -15,7 +15,6 @@ HTTP server will accept a single file per request at '/scan' endpoint, and retur
 500 => Server error
 
 503 => The underlaying clamav is not alive, it can not scan file.
-
 
 
 ------------------------------------------------------------------------------------------------
