@@ -1,7 +1,17 @@
-To run with automatic updates of virus definitions:
-cp docker-entrypoint-with-updates.sh docker-entrypoint.sh
+This package is a Node.js wrapper around the Clamav Daemon.
 
-To run wihtout updates:
-cp docker-entrypoint-no-updates.sh  docker-entrypoint.sh
+It uses a custom node.js Buildpack which handles building of the underlaying clamav.
 
-New definitions are always retrieved when the container is built.
+Custom Node.js buildpack:https://github.com/Shifeng-ON/nodejs-buildpack.git
+
+HTTP server will accept a single file per request at '/scan' endpoint, and return scan result in HTTP status code
+
+200 => No virus found.
+
+400 => No file is uplaoded
+
+406 => virus found, including a json message indicating the virus signature.
+
+500 => Server error
+
+503 => The underlaying clamav is not alive, it can not scan file.
