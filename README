@@ -15,3 +15,12 @@ HTTP server will accept a single file per request at '/scan' endpoint, and retur
 500 => Server error
 
 503 => The underlaying clamav is not alive, it can not scan file.
+
+
+
+------------------------------------------------------------------------------------------------
+Clamav directory contains a pre-built binary of clamav program, when pushing to Blumix, you have two ways to go:
+
+1. push the clamav directory along with the source code, in that case, the pushde clamav program will be used .
+
+2. push without the clamav directory, at this stage, the build pack will attemp to build clamav on build time. 
