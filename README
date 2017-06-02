@@ -8,7 +8,7 @@ HTTP server will accept a single file per 'POST' request at '/scan' endpoint, an
 
 200 => No virus found.
 
-400 => No file is uplaoded
+400 => No file is uplaoded, or file is too large > 23M.
 
 406 => virus found, including a json message indicating the virus signature.
 
