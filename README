@@ -1,6 +1,6 @@
 This package is a Node.js wrapper around the Clamav Daemon.
 
-It uses a custom node.js Buildpack which handles the underlaying clamav.
+It uses a custom node.js Buildpack which handles the underlaying clamav.(see detail below)
 
 Custom Node.js buildpack:https://github.com/Shifeng-ON/nodejs-buildpack.git
 
