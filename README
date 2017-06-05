@@ -1,3 +1,5 @@
+Branch under development.
+
 Package info:
 
 This package is a Node.js wrapper around the Clamav Daemon, it will only work on diego cloud foundry!
