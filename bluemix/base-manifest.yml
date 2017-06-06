@@ -1,0 +1,11 @@
+---
+path: ../
+memory: 1024M
+instances: 1
+disk_quota: 1024M
+buildpack: https://github.com/cloudfoundry/nodejs-buildpack
+env:
+  TZ: 'America/Toronto'
+applications:
+- name: icon-clamav
+  host: icon-clamav
