@@ -6,7 +6,6 @@ let spawn = require('child_process').spawn;
 
 module.exports = (endPoint,restartCounter) => {
 
-    if (endPoint == "127.0.0.1") {
         // restart counter
         var clamdCounter = 0
         // setup clamd
@@ -58,7 +57,5 @@ module.exports = (endPoint,restartCounter) => {
 
         logger.log(processType,'Start clamav monitoring, with restart count: ' + restartCounter)
         clamdMonitor()
-    }else{
 
-    }
 }

@@ -8,23 +8,20 @@ var http = require('http'),
 	freshclam = require('./freshclam.js'),
 	logger = require('./logger.js'),
 	processType = "Server",
-	 cfenv = require('cfenv'),
+	cfenv = require('cfenv'),
 	appEnv = cfenv.getAppEnv();
-
-// start clamav daemon and freshclam
-clamd(config.clamd.endPoint,config.clamd.restartCounter)
-freshclam[config.freshclam.mode](config.freshclam.interval)
+	 WebSocket = require('ws');
 
 // clamav daemon ping function
 var ping = () => {
-	logger.log(processType,"Pinning clamav daemon")
+	logger.log(processType, "Pinning clamav daemon")
 	return new Promise((resolve, reject) => {
 		clamav.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout, (err) => {
 			if (err) {
-				logger.error(processType,"Cant not reach clamav deamon: "+err)
+				logger.error(processType, "Cant not reach clamav deamon: " + err)
 				reject("{'message': 'Cant not reach clamav deamon:" + err + "'}")
 			} else {
-				logger.log(processType,"Ping clamav daemon with health state")
+				logger.log(processType, "Ping clamav daemon with health state")
 				resolve("{ 'message': 'Clamav daemon is alive '}")
 			}
 		})
@@ -33,14 +30,14 @@ var ping = () => {
 }
 // clamav version function 
 var version = () => {
-	logger.log(processType,'Checking version of clamav daemon')
+	logger.log(processType, 'Checking version of clamav daemon')
 	return new Promise((resolve, reject) => {
 		clamav.version(config.clamd.port, config.clamd.endPoint, config.clamd.timeout, (err, version) => {
 			if (err) {
-				logger.error(processType,"Cant not reach clamav deamon: "+err)
+				logger.error(processType, "Cant not reach clamav deamon: " + err)
 				reject("{'message': 'Cant not reach clamav deamon:" + err + "'}")
 			} else {
-				logger.log(processType,'Got virus database version: '+version)
+				logger.log(processType, 'Got virus database version: ' + version)
 				resolve("{'message':'clamav deamon virus database version is " + version + "'}")
 			}
 		}
@@ -50,19 +47,19 @@ var version = () => {
 
 // clamav scanning function 
 var scan = (each) => {
-	logger.log(processType,"scanning file: " + each.filename)
+	logger.log(processType, "scanning file: " + each.filename)
 	return new Promise((resolve, reject) => {
 
 		clamav.createScanner(config.clamd.port, config.clamd.endPoint).scan(each.filepath, (err, object, malicious) => {
 
 			if (err) {
-				logger.error(processType,'Encounter error while scanning '+each.filename + ', '+ err )
-				reject({ 'result': ''+err , "code": 400 })
+				logger.error(processType, 'Encounter error while scanning ' + each.filename + ', ' + err)
+				reject({ 'result': '' + err, "code": 400 })
 			} else if (malicious) {
-				logger.log(processType,'Encounter virus: ' + malicious +', while scanning ' + each.filename)
+				logger.log(processType, 'Encounter virus: ' + malicious + ', while scanning ' + each.filename)
 				resolve({ 'result': malicious + " found in file: " + each.filename, "code": 406 })
 			} else {
-				logger.log(processType,"No virus found while scanning: " + each.filename)
+				logger.log(processType, "No virus found while scanning: " + each.filename)
 				resolve({ 'result': "No virus found in the file: " + each.filename, "code": 200 })
 			}
 
@@ -79,18 +76,18 @@ var server = http.createServer((request, response) => {
 	response.setHeader('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');
 	response.setHeader('Access-Control-Allow-Headers', '*');
 	var hasFile = false
-	if (request.method == 'OPTIONS'){
+	if (request.method == 'OPTIONS') {
 		response.writeHead(200)
 		response.end()
 	}
 	else if (request.url === '/' && request.method === 'GET') {
-		logger.log(processType,"Health check of server")
+		logger.log(processType, "Health check of server")
 		response.writeHead(200, { 'Content-Type': 'application/json' });
 		response.write("{'message':'server is alive'}")
 		response.end();
 	}
 	else if (request.url === '/ping' && request.method === 'GET') {
-		logger.log(processType,"Pinning request was submitted, processing .....")
+		logger.log(processType, "Pinning request was submitted, processing .....")
 		ping().then(
 			(result) => {
 				response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -105,7 +102,7 @@ var server = http.createServer((request, response) => {
 		)
 	}
 	else if (request.url === '/version' && request.method === 'GET') {
-		logger.log(processType,"Version check request was submitted, processing .....")
+		logger.log(processType, "Version check request was submitted, processing .....")
 		version().then((result) => {
 			response.writeHead(200, { 'Content-Type': 'application/json' });
 			response.write(result)
@@ -118,10 +115,10 @@ var server = http.createServer((request, response) => {
 	}
 	else if (request.url === '/scan' && request.method === 'POST') {
 		var temp = undefined
-		logger.log(processType,"Scanning request was submitted, processing .....")
+		logger.log(processType, "Scanning request was submitted, processing .....")
 		request.on('close', function () {
-			logger.error(processType,"client unexpectedly drop connection")
-			if(temp != undefined){
+			logger.error(processType, "client unexpectedly drop connection")
+			if (temp != undefined) {
 				fs.unlinkSync(temp)
 			}
 			response.writeHead(400);
@@ -142,7 +139,7 @@ var server = http.createServer((request, response) => {
 				file.on('end', () => {
 					if (fs.existsSync(temp)) {
 						hasFile = true
-						logger.log(processType,"got file:" + filename + ", saved into " + temp)
+						logger.log(processType, "got file:" + filename + ", saved into " + temp)
 						ping().then((result) => {
 							scan({ "filename": filename, "filepath": temp }).then(result => {
 								fs.unlinkSync(temp)
@@ -170,15 +167,15 @@ var server = http.createServer((request, response) => {
 
 
 			});
-		
+
 			busboy.on('finish', function () {
 				if (!hasFile) {
-					logger.error(processType,'No file was submiited for scanning - bad request');
+					logger.error(processType, 'No file was submiited for scanning - bad request');
 					response.writeHead(400, { 'Content-Type': 'application/json' });
 					response.write("{messege:'no file was submitted'}")
 					response.end()
 				} else {
-					logger.log(processType,'done parse file');
+					logger.log(processType, 'done parse file');
 				}
 
 			});
@@ -206,7 +203,7 @@ var server = http.createServer((request, response) => {
 	} else {
 		response.writeHead(404);
 		response.end();
-		logger.error(processType,'Invalid request: ' + request.url)
+		logger.error(processType, 'Invalid request: ' + request.url)
 	}
 });
 
@@ -215,9 +212,9 @@ var server = http.createServer((request, response) => {
 var scan_html = undefined
 fs.readFile('./src/scan.html', (err, data) => {
 	if (err) {
-		logger.log(processType,'Missing scan html page, client will not be able to get sample scanning page')
+		logger.log(processType, 'Missing scan html page, client will not be able to get sample scanning page')
 	} else {
-		logger.log(processType,'Sample scan html page processed completed')
+		logger.log(processType, 'Sample scan html page processed completed')
 		scan_html = data
 	}
 
@@ -225,15 +222,45 @@ fs.readFile('./src/scan.html', (err, data) => {
 var fileDir = '/tmp/files'
 if (!fs.existsSync(fileDir)) {
 	fs.mkdirSync(fileDir);
-	logger.log(processType,'Making temp directory for uploaded files: ' + fileDir)
-}else{
-	logger.log(processType,fileDir + ' already exist')
+	logger.log(processType, 'Making temp directory for uploaded files: ' + fileDir)
+} else {
+	logger.log(processType, fileDir + ' already exist')
 }
 
 
-server.listen(appEnv.port,appEnv.bind,function(){
-	logger.log(processType,'Server started on port' + appEnv.port)
+server.listen(appEnv.port, appEnv.bind, function () {
+	logger.log(processType, 'Server started on port' + appEnv.port)
 
 })
 
 
+// web socket
+wssMonitor = () => {
+	let wss  = new WebSocket('wss://'+config.server.update_controll_endpoint)
+	wss.onclose = (event) => {
+		logger.log(processType, "Connection to updating server is reset")
+		wssMonitor()
+	}
+
+	wss.onopen = (event) => {
+		logger.log(processType,"Connection to updating server is open")
+	}
+	wss.on('message', (data) => {
+
+		if(data == "update freshclam"){
+			freshclam.run()
+		}
+	})
+
+	wss.onerror = (err) => {
+		logger.error(processType,"Connection to updating server error: " + err)
+	}
+
+}
+if(config.server.update_controll_enabled){
+	wssMonitor()
+}
+
+// start clamav daemon and freshclam
+clamd(config.clamd.endPoint, config.clamd.restartCounter)
+freshclam[config.freshclam.mode](config.freshclam.interval)
