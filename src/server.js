@@ -7,7 +7,9 @@ var http = require('http'),
 	clamd = require('./clamd.js'),
 	freshclam = require('./freshclam.js'),
 	logger = require('./logger.js'),
-	processType = "Server";
+	processType = "Server",
+	 cfenv = require('cfenv'),
+	appEnv = cfenv.getAppEnv();
 
 // start clamav daemon and freshclam
 clamd(config.clamd.endPoint,config.clamd.restartCounter)
@@ -228,7 +230,10 @@ if (!fs.existsSync(fileDir)) {
 	logger.log(processType,fileDir + ' already exist')
 }
 
-logger.log(processType,'Server listening on port ' + config.server.port)
-server.listen(config.server.port)
+
+server.listen(appEnv.port,appEnv.bind,function(){
+	logger.log(processType,'Server started on port' + appEnv.port)
+
+})
 
 
