@@ -7,5 +7,5 @@ buildpack: https://github.com/Shifeng-ON/nodejs-buildpack.git
 env:
   TZ: 'America/Toronto'
 applications:
-- name: icon-clamav
-  host: icon-clamav
+- name: icon-clamav-testing
+  host: icon-clamav-testing

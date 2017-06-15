@@ -5,10 +5,12 @@ module.exports= {
     timeout: process.env.CLAMAV_TIMEOUT || 10000, // 10s before considering it a failed attempt
     restartCounter:process.env.RESTART_COUNTER || 10 // 
   },freshclam:{
-    mode: process.env.FRESHCLAM_MODE || 0, //0 for auto pull, 1 for manaul push 
+    auto_enabled: process.env.FRESHCLAM_AUTO_ENABLED || 0, // default to disable 0=disable, other enable
     interval:process.env.FRESHCLAMV_INTERVAL || '3600000' // auto pull per hour
   },server:{
-    update_controll_enabled:  process.env.UPDATE_CONTROLL_ENABLED || true ,
-    update_controll_endpoint: process.env.UPDATE_CONTROLL_ENDPOINT 
+    debug: process.env.DEBUG || 1 // debug message will be logged 0=disable, other enable
+  },updateControll:{
+    enabled:  process.env.UPDATE_CONTROLL_ENABLED || 1 , // default to enable 0=disable, other enable
+    endpoint: process.env.UPDATE_CONTROLL_ENDPOINT , // getting enviroment  injected endpoint
   }
 }
