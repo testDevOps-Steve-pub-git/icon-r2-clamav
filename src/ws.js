@@ -7,9 +7,9 @@ var	 cfenv = require('cfenv'),
      error = false,
      clamd = require('./clamd.js'),
      config = require('./config.js'),
-     identifier = { application_id:appEnv.application_id,application_name:appEnv.application_name,
-                    application_urls:appEnv.application_urls,instance_index:appEnv.instance_index,
-                    instance_id:appEnv.instance_id}
+     identifier = { application_id:appEnv.app.application_id,application_name:appEnv.app.application_name,
+                    application_urls:appEnv.app.application_urls,instance_index:appEnv.app.instance_index,
+                    instance_id:appEnv.app.instance_id}
 
 
 
