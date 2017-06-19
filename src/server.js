@@ -182,7 +182,7 @@ server.listen(appEnv.port, appEnv.bind, function () {
 
 
 // establish  websocket connection. 
-wssStart(config.updateControll.enabled,config.updateControll.endpoint)
+wssStart(config.updateControll.enabled,config.updateControll.endpoint,false)
 // start clamav daemon
 clamd.clamdStart(config.clamd.endPoint, config.clamd.restartCounter)
 // start  freshclam

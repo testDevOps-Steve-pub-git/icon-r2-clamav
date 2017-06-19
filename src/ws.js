@@ -16,7 +16,7 @@ var cfenv = require('cfenv'),
 
 
 
-module.exports = wssStart = (enabled, endpoint) => {
+module.exports = wssStart = (enabled, endpoint, reset) => {
     if (!enabled) {
         logger.log(processType, 'Virus Update Controll is disabled')
         return
@@ -28,26 +28,41 @@ module.exports = wssStart = (enabled, endpoint) => {
     }
 
     let wss = new WebSocket(endpoint)
-    var msgMap = { "init": "init", "heartbeat": "heartbeat", "updating": "updating", "updated": "updated","updateError":"updateError" }
+    var msgMap = { "init": "init", "reset": "reset", "heartbeat": "heartbeat", "update":'update' }
     let timer = 0
     wss.onopen = (event) => {
+        let type = msgMap['init']
+        if (reset) {
+            type = msgMap['reset']
+        }
         logger.log(processType, "Connection to Virus Update Controll server is open, will be reset every 2 minutes")
-        // send regisitration detail
-        wss.send(JSON.stringify({ "type": msgMap['init'], "identifier": identifier, "detail": '' }))
+        // send initialization detail
+        wss.send(JSON.stringify({ "type": type, "identifier": identifier, "detail": '' }))
 
         // send status update of clam deadmon every minute
         timer = setInterval(() => {
+            logger.debug(processType, "Sending heartbeat to updated controll server")
             clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
-                wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'green' }))
+                if (wss.readyState === WebSocket.OPEN) {
+                    wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'green' }))
+                } else {
+                    logger.log(processType, "Communication tunnel accidentally closed, please wait for connection reset.")
+                }
+
             }, (reason) => {
-                wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'red' }))
+                if (wss.readyState === WebSocket.OPEN) {
+                    wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'red' }))
+                } else {
+                    logger.log(processType, "Communication tunnel accidentally closed, please wait for connection reset.")
+                }
+
             }
             )
-            logger.debug(processType,"Sending heartbeat to updated controll server")
+
         }, 60000)
     }
     wss.onerror = (err) => {
-         clearInterval(timer)
+        clearInterval(timer)
         logger.error(processType, "Connection to updated server failed: " + err)
         error = true
     }
@@ -56,7 +71,7 @@ module.exports = wssStart = (enabled, endpoint) => {
         clearInterval(timer)
         if (!error && !event.wasClean) {
             logger.debug(processType, "Connection to Virus Update Controll server will be reset")
-            wssStart(enabled, endpoint)
+            wssStart(enabled, endpoint, true)
         } else {
             logger.log(processType, "Connection to virus Update Controll closed normally, virus database will not be updated anymore.")
         }
@@ -69,35 +84,51 @@ module.exports = wssStart = (enabled, endpoint) => {
             case msgMap['init']:
                 logger.log(processType, 'registered with update controll server at: ' + endpoint)
                 break;
+            case msgMap['reset']:
+                logger.log(processType, 'connection reset with update controll server at: ' + endpoint)
+                break
             case msgMap['heartbeat']:
-                logger.debug(processType,"Manually deliver heartbeat to update controll server")
+                logger.debug(processType, "Manually deliver heartbeat to update controll server")
                 clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
-                    wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'green' }))
+                    if (wss.readyState === WebSocket.OPEN) {
+                        wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'green' }))
+                    } else {
+                        logger.log(processType, "Communication tunnel accidentally closed, please wait for connection reset.")
+                    }
+
                 }, (reason) => {
-                    wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'red' }))
+                    if (wss.readyState === WebSocket.OPEN) {
+                        wss.send(JSON.stringify({ "type": msgMap['heartbeat'], "identifier": identifier, "detail": 'red' }))
+                    } else {
+                        logger.log(processType, "Communication tunnel accidentally closed, please wait for connection reset.")
+                    }
                 }
                 )
-               
+
                 break;
-            case msgMap['updating']:
-                logger.debug(processType,"receiving virus database update signal from updated controll server")
-                wss.send(JSON.stringify({ "type": msgMap['updating'], "identifier": identifier, "detail": true }))
+            case msgMap['update']:
+                logger.debug(processType, "received virus database update signal from updated controll server")
+                if (wss.readyState === WebSocket.OPEN) {
+                    wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail":{"updating":true,"updatingError":false} }))
+                } else {
+                    logger.log(processType, "Communication tunnel accidentally closed, please wait for connection reset.")
+                }
                 freshclam.run(
-                    (error)=>{
-                        if(error){
-                            logger.debug(processType,"Failed to updated virus database")
-                             wss.send(JSON.stringify({ "type": msgMap['updateError'], "identifier": identifier, "detail": false }))
-                        }else{
-                            logger.debug(processType,"Successfully updated virus database")
-                             wss.send(JSON.stringify({ "type": msgMap['updated'], "identifier": identifier, "detail": false }))
+                    (error) => {
+                        if (error) {
+                            logger.debug(processType, "Failed to updated virus database")
+                            wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": {"updating":false,"updatingError":true} }))
+                        } else {
+                            logger.debug(processType, "Successfully updated virus database")
+                            wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": {"updating":false,"updatingError":false} }))
                         }
-  
+
                     }
 
                 )
-                
+
                 break;
-            default:break;
+            default: break;
         }
 
     })

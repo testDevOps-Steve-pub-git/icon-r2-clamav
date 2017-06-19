@@ -12,6 +12,9 @@ let runfreshclam = (cb) => {
         isRunning = true
 
         freshclam.on('error', (error) => {
+             if(cb != undefined){
+                cb(true)
+             }
             logger.error(processType, "error creating freshclam, unable to get new virus definitions" + error)
             isRunning = false
           
