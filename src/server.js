@@ -15,6 +15,7 @@ var http = require('http'),
 
 // main http server 
 var server = http.createServer((request, response) => {
+	//CORS
 	response.setHeader('Access-Control-Allow-Origin', '*');
 	response.setHeader('Access-Control-Request-Method', '*');
 	response.setHeader('Access-Control-Allow-Methods', 'OPTIONS,GET,POST');

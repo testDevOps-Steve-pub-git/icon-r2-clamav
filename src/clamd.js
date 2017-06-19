@@ -32,17 +32,6 @@ var clamdStart = (endooint, restartCounter) =>{
 
 
     })
-    clamd.on('close', (code, signal) => {
-        if (code != 0) {
-            logger.error(processType, "clamav daemon exited abnormally with code " + code + ", restarting clamav daemon")
-            clamdStart(endPoint,restartCounter - 1)
-
-        } else {
-            logger.log(processType, "clamav daemon exited normally, shutting down main http layer")
-            process.exit(1)
-        }
-
-    })
     clamd.stderr.on('data', (err) => {
         logger.log(processType, err.toString('utf8'))
     })

@@ -5,7 +5,7 @@ let freshclamExec = 'bin/freshclam'
 let spawn = require('child_process').spawn
 var isRunning = false
 
-let runfreshclam = () => {
+let runfreshclam = (cb) => {
     if (!isRunning) {
         logger.log(processType, 'Start update virus database')
         let freshclam = spawn(base + freshclamExec, ['--daemon-notify=' + base + 'etc/clamd.conf'])
@@ -14,27 +14,26 @@ let runfreshclam = () => {
         freshclam.on('error', (error) => {
             logger.error(processType, "error creating freshclam, unable to get new virus definitions" + error)
             isRunning = false
+          
         })
 
         freshclam.on('exit', (code, signal) => {
             if (code == 0) {
+                if(cb != undefined){
+                cb(false)
+                }
+               
                 logger.log(processType, 'Virus database updated successfully')
             } else {
+                if(cb != undefined){
+                cb(true)
+                }
                 logger.error(processType, 'Virus database updated unsuccessfully, exit code: ' + code)
             }
             isRunning = false
-
+            
         })
 
-        freshclam.on('close', (code, signal) => {
-            if (code == 0) {
-                logger.log(processType, 'Virus database updated successfully')
-            } else {
-                logger.error(processType, 'Virus database updated unsuccessfully, exit code: ' + code)
-            }
-            isRunning = false
-
-        })
 
         freshclam.stderr.on('data', (err) => {
             logger.error(processType, err.toString('utf8'))
