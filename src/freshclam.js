@@ -45,6 +45,9 @@ let runfreshclam = (cb) => {
 
     } else {
         logger.error(processType, "Virus database process is already running")
+          if(cb != undefined){
+                cb(false)
+            }
     }
 
 }
