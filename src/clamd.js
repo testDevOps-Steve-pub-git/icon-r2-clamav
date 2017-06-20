@@ -100,14 +100,10 @@ var scan = (port,endpoint,each) => {
 }
 
 
-let config=()=>{
-	
-}
 module.exports = {
     clamdStart:clamdStart,
     ping:ping,
     version:version,
-    scan:scan,
-	config:config
+    scan:scan
  
 }

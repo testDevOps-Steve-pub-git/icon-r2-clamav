@@ -3,6 +3,7 @@ let processType = 'Virus Database Update'
 let base = '/home/vcap/app/clamav/'
 let freshclamExec = 'bin/freshclam'
 let spawn = require('child_process').spawn
+let fs = require('fs')
 var isRunning = false
 
 let runfreshclam = (cb, command) => {
@@ -57,16 +58,46 @@ let runfreshclam = (cb, command) => {
 
 
 let schedule = (interval) => {
-        // schedule freshclam
-        setInterval(runfreshclam, interval)
+    // schedule freshclam
+    setInterval(runfreshclam, interval)
 }
 
-let config=()=>{
-	
+let config = (key, value) => {
+    if (value != undefined && key != undefined) {
+        let lines = undefined
+        if (fs.existsSync('./clamav/etc/freshclam.conf')) {
+            // read file content, and delete old file
+            lines = fs.readFileSync('./clamav/etc/freshclam.conf').toString().split('\n')
+            fs.unlink('./clamav/etc/freshclam.conf')
+            // create new config
+            fs.appendFileSync('./clamav/etc/freshclam.conf', '')
+            try {
+                let newLines = []
+                for(var each of lines){
+                     var line = each.split(' ')
+                    if (line[0] == key) {
+                        line[1] = value
+                    }
+                    newLines.push(line.join(' '))
+                }
+                fs.appendFileSync('./clamav/etc/freshclam.conf', newLines.join('\n'))
+            } catch (e) {
+                logger.error(processType, "config freshclam failed: " + e.message)
+            }
+        } else {
+            fs.appendFileSync('./clamav/etc/freshclam.conf', key + ' ' + value)
+        }
+
+
+
+
+    }else{
+            logger.error(processType, "config freshclam failed: empty configuration")
+    }   
 }
 
 module.exports = {
     schedule: schedule,
     run: runfreshclam,
-    config:config
+    config: config
 }

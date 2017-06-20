@@ -6,7 +6,8 @@ module.exports= {
     restartTime:process.env.CLAMAV_RESTART_TIME || 30, 
   },freshclam:{
     auto_enabled: process.env.FRESHCLAM_AUTO_ENABLED || 0, // default to disable 0=disable, other enable
-    interval:process.env.FRESHCLAMV_INTERVAL || '3600000' // auto pull per hour
+    interval:process.env.FRESHCLAMV_INTERVAL || '3600000', // auto pull per hour
+    private_mirror: process.env.PRIVATE_MIRROR || undefined
   },server:{
     debug: process.env.DEBUG || 1, // debug message will be logged 0=disable, other enable
   },updateControll:{

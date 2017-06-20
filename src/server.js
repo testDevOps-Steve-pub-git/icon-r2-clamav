@@ -175,24 +175,29 @@ if (!fs.existsSync(fileDir)) {
 
 
 server.listen(appEnv.port, appEnv.bind, function () {
-	logger.log(processType, 'Main Http Server is listening on ' + appEnv.bind+':'+ appEnv.port)
+	logger.log(processType, 'Main Http Server is listening on ' + appEnv.bind + ':' + appEnv.port)
 
 })
 
 
 
 // start clamav daemon
-if(!appEnv.isLocal){
-clamd.clamdStart(config.clamd.endPoint,config.clamd.restartTime)
-logger.log(processType, 'Starting clamav deamon')
- }else{
- 	logger.log(processType,"local environment will not enable clamav daemon")
- }
+if (!appEnv.isLocal) {
+	clamd.clamdStart(config.clamd.endPoint, config.clamd.restartTime)
+	logger.log(processType, 'Starting clamav deamon')
+} else {
+	logger.log(processType, "local environment will not enable clamav daemon")
+}
 
 
 
 
 
+// config first
+if (config.freshclam.private_mirror != undefined) {
+	freshclam.config('PrivateMirror', config.freshclam.private_mirror)
+	logger.log(processType, 'Configuring private mirror at: ' + config.freshclam.private_mirror)
+}
 // start  freshclam if enabled
 if (config.freshclam.auto_enabled) {
 	// calculate interval
@@ -229,7 +234,7 @@ if (config.freshclam.auto_enabled) {
 // establish  update controll server connection if enalbed. 
 
 if (config.updateControll.enabled) {
-	wssStart(config.updateControll.endpoint,config.updateControll.restartTime,config.clamd)
+	wssStart(config.updateControll.endpoint, config.updateControll.restartTime, config.clamd)
 	logger.log(processType, 'Starting Updating controll process')
 
 } else {
