@@ -6,30 +6,29 @@ let spawn = require('child_process').spawn
 let clamav = require('clamav.js')
 
 // clamav deamon initialization
-var clamdStart = (endooint, restartCounter) =>{
-
-    if (restartCounter <= 0) {
-        logger.error(processType, "Clamav daemon can not be restarted due to limited restart count")
-        process.exit(1)
-    }
-
+var clamdStart = (endpoint,restartTime,restart) =>{
+	var error = false
     var clamd = spawn(base + clamdExec)
-    logger.log(processType, 'Starting clamav deamon, with restart count: ' + restartCounter)
+	if(restart!=undefined){
+		logger.log(processType, 'Restarting clamav deamon')
+	}
 
     clamd.on('error', (error) => {
-        logger.error(processType, "error initializing clamav deamon, shutting down main http layer" + error)
-        process.exit(1)
+        logger.error(processType, "error initializing clamav deamon: " + error + ' - retry in ' + restartTime + ' seconds')
+		error = true
+		setInterval(()=>{
+				clamdStart(endpoint,restartTime,true)
+		},restartTime * 1000) 
     })
     clamd.on('exit', (code, signal) => {
-        if (code != 0) {
-            logger.error(processType, "clamav daemon exited abnormally with code " + code + ", restarting clamav daemon")
-            clamdStart(endpoint, restartCounter - 1)
-
-        } else {
-            logger.log(processType, "clamav daemon exited normally, shutting down main http layer")
-            process.exit(1)
-        }
-
+        logger.error(processType, "clamav daemon exited  with code " + code)
+		logger.log(processType,"Restarting clamav daemon in " + restartTime + " seconds")
+        if(!error){
+			setInterval(()=>{
+				clamdStart(endpoint,restartTime,true)
+			},restartTime * 1000) 
+		}
+		
 
     })
     clamd.stderr.on('data', (err) => {
@@ -101,11 +100,14 @@ var scan = (port,endpoint,each) => {
 }
 
 
-
+let config=()=>{
+	
+}
 module.exports = {
     clamdStart:clamdStart,
     ping:ping,
     version:version,
-    scan:scan
+    scan:scan,
+	config:config
  
 }

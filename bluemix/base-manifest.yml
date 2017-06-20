@@ -1,11 +1,13 @@
 ---
 path: ../
 memory: 1024M
-instances: 1
+instances: 3
 disk_quota: 1024M
 buildpack: https://github.com/Shifeng-ON/nodejs-buildpack.git
 env:
   TZ: 'America/Toronto'
+  UPDATE_CONTROLL_ENDPOINT: 'wss://freshclam-server.mybluemix.net/notify'
 applications:
 - name: icon-clamav-testing
   host: icon-clamav-testing
+

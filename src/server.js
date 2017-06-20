@@ -9,7 +9,7 @@ var http = require('http'),
 	processType = "Server",
 	cfenv = require('cfenv'),
 	appEnv = cfenv.getAppEnv();
-	wssStart = require('./ws.js')
+wssStart = require('./ws.js')
 
 
 
@@ -33,7 +33,7 @@ var server = http.createServer((request, response) => {
 	}
 	else if (request.url === '/ping' && request.method === 'GET') {
 		logger.debug(processType, "Pinning request was submitted, processing .....")
-	    clamd.ping(config.clamd.port,config.clamd.endPoint,config.clamd.timeout).then(
+		clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then(
 			(result) => {
 				response.writeHead(200, { 'Content-Type': 'application/json' });
 				response.write(result)
@@ -48,7 +48,7 @@ var server = http.createServer((request, response) => {
 	}
 	else if (request.url === '/version' && request.method === 'GET') {
 		logger.debug(processType, "Version check request was submitted, processing .....")
-		clamd.version(config.clamd.port,config.clamd.endPoint,config.clamd.timeout).then((result) => {
+		clamd.version(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
 			response.writeHead(200, { 'Content-Type': 'application/json' });
 			response.write(result)
 			response.end();
@@ -71,7 +71,7 @@ var server = http.createServer((request, response) => {
 
 		});
 
-		clamd.ping(config.clamd.port,config.clamd.endPoint,config.clamd.timeout).then((result) => {
+		clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
 
 			var busboy = new Busboy({ 'headers': request.headers, limits: { files: 1 } });
 			busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
@@ -85,8 +85,8 @@ var server = http.createServer((request, response) => {
 					if (fs.existsSync(temp)) {
 						hasFile = true
 						logger.debug(processType, "got file:" + filename + ", saved into " + temp)
-						clamd.ping(config.clamd.port,config.clamd.endPoint,config.clamd.timeout).then((result) => {
-							clamd.scan(config.clamd.port,config.clamd.endPoint,{ "filename": filename, "filepath": temp }).then(result => {
+						clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
+							clamd.scan(config.clamd.port, config.clamd.endPoint, { "filename": filename, "filepath": temp }).then(result => {
 								fs.unlinkSync(temp)
 								response.writeHead(result.code, { 'Content-Type': 'application/json' });
 								response.write(JSON.stringify({ message: result.result }))
@@ -175,15 +175,63 @@ if (!fs.existsSync(fileDir)) {
 
 
 server.listen(appEnv.port, appEnv.bind, function () {
-	logger.log(processType, 'Server started on port ' + appEnv.port)
+	logger.log(processType, 'Main Http Server is listening on ' + appEnv.bind+':'+ appEnv.port)
 
 })
 
 
 
-// establish  websocket connection. 
-wssStart(config.updateControll.enabled,config.updateControll.endpoint,false)
 // start clamav daemon
-clamd.clamdStart(config.clamd.endPoint, config.clamd.restartCounter)
-// start  freshclam
-freshclam.schedule(config.freshclam.auto_enabled,config.freshclam.interval)
+if(!appEnv.isLocal){
+clamd.clamdStart(config.clamd.endPoint,config.clamd.restartTime)
+logger.log(processType, 'Starting clamav deamon')
+ }else{
+ 	logger.log(processType,"local environment will not enable clamav daemon")
+ }
+
+
+
+
+
+// start  freshclam if enabled
+if (config.freshclam.auto_enabled) {
+	// calculate interval
+	let getDateString = (interval) => {
+		var dateString = ''
+		let secs = Math.floor((interval / 1000) % 60)
+		let mins = Math.floor((interval / (1000 * 60)) % 60)
+		let hours = Math.floor((interval / (1000 * 60 * 60)) % 24)
+		let days = Math.floor((interval / (1000 * 60 * 60 * 24)))
+		if (days) {
+			dateString += days + ' days, '
+		}
+		if (hours) {
+			dateString += hours + ' hours, '
+		}
+		if (mins) {
+			dateString += mins + ' minutes, '
+		}
+		if (secs) {
+			dateString += secs + ' seconds.'
+		}
+		return dateString
+	}
+	let dateString = getDateString(config.freshclam.interval)
+	logger.log(processType, 'Schedule virus database update every ' + dateString)
+	//start
+	freshclam.schedule(config.freshclam.interval)
+} else {
+	logger.log(processType, 'Virus database will not be updated automatically')
+}
+
+
+
+// establish  update controll server connection if enalbed. 
+
+if (config.updateControll.enabled) {
+	wssStart(config.updateControll.endpoint,config.updateControll.restartTime,config.clamd)
+	logger.log(processType, 'Starting Updating controll process')
+
+} else {
+	logger.log(processType, 'Virus Update Controll is disabled')
+}
