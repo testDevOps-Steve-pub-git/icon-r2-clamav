@@ -39,9 +39,9 @@ Please use command '$ cf push'
 
 Clamav directory contains a pre-built binary of clamav program, when pushing to Blumix, you have two ways to go:
 
-1. push the clamav directory along with the source code, in that case, the pushed clamav program will be used(reducing build time of the deployemnt) .
+1. push the clamav directory along with the source code, in that case, the pushed clamav(version 0.99.2) program will be used(reducing build time of the deployemnt) .
 
-2. push without the clamav directory, at this stage, the buildpack will attemp to build clamav.
+2. push without the clamav directory, at this stage, the buildpack will attemp to build clamav.(can customize version through buildpack)
 
 Note* 
 
