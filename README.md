@@ -1,8 +1,8 @@
 Branch under development.
-#CF-CLAMAV
+# CF-CLAMAV
 
 
-##Package info:
+## Package info:
 
 This package is a Node.js HTTP wrapper around the clamav daemon and the freshclam (virus database update utility)
 
@@ -11,7 +11,7 @@ It uses a custom node.js Buildpack which handles the building(see detail below)
 Custom Node.js buildpack:https://github.com/Shifeng-ON/nodejs-buildpack.git
 
 ------------------------------------------------------------------------------------------------------------------
-##Availiable HTTP API:(detail can be chekced on the PDF file in docs directory)
+## Availiable HTTP API:(detail can be chekced on the PDF file in docs directory)
 
 HTTP server will accept a single file per 'POST' request at '/scan' endpoint, and return scan result in HTTP status code
 
@@ -27,25 +27,11 @@ HTTP server will accept a single file per 'POST' request at '/scan' endpoint, an
 
 
 ------------------------------------------------------------------------------------------------------------------
-##Deploying to Bluemix:
+## Deploying to Bluemix:
 
-###Preconfig
+### Preconfigure
 
-As we use custom buildpack, there are several building parameters can be configured through creating ".env" files at root directory.
-
-And each line of the file should be in format of "key=value", and where key and value match configurable parameters(see below table).
-
-| Service name   | configuration file name |           configurable parameters can be found below           |
-| -------------- | ----------------------- | -------------------------------------------------------------- |
-|    build       |      build.env          |            [see here](doc/BUILD)                               |
-| clamav daemon  |       clamd.env         | [see here](https://www.systutorials.com/docs/linux/man/5-freshclam.conf/)|
-| freshclam      |      freshclam.env      | [see here](https://www.systutorials.com/docs/linux/man/5-clamd.conf/)|
-
-*note: if duplicated key is specified, only the last key=value will be taken into effect
-
-####For example
-
-if you want to set up a private mirror, the file "freshclam.env" should contain a line "PrivateMirror=<your privated mirror IP>"
+refer to the buildpack repository for information [see here](https://github.com/Shifeng-ON/nodejs-buildpack.git)
 
 ### Deployment
 
