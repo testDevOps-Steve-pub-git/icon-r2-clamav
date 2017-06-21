@@ -43,7 +43,7 @@ module.exports = wssStart = (endpoint,restartTime,clamdConfig) => {
         logger.error(processType, "Connection to updated server failed: " + err)
     }
     wss.onclose = (event) => {
-        logger.log(processType, "Connection to Virus Update Controll will be re-established in " + restartTime + " seconds ")
+        logger.log(processType, "Connection to Virus Update Controll is closed. It will be re-established in " + restartTime + " seconds ")
         setTimeout(() => {
             wssStart(endpoint,restartTime,clamdConfig)
         }, restartTime * 1000)
