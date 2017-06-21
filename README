@@ -1,15 +1,17 @@
 Branch under development.
+#CF-CLAMAV
 
-Package info:
 
-This package is a Node.js wrapper around the Clamav Daemon, it will only work on diego cloud foundry!(will work on DEA by configuration)
+##Package info:
 
-It uses a custom node.js Buildpack which handles the underlaying clamav.(see detail below)
+This package is a Node.js HTTP wrapper around the clamav daemon and the freshclam (virus database update utility)
+
+It uses a custom node.js Buildpack which handles the building(see detail below)
 
 Custom Node.js buildpack:https://github.com/Shifeng-ON/nodejs-buildpack.git
 
 ------------------------------------------------------------------------------------------------------------------
-HTTP API:
+##Availiable HTTP API:(detail can be chekced on the PDF file in docs directory)
 
 HTTP server will accept a single file per 'POST' request at '/scan' endpoint, and return scan result in HTTP status code
 
@@ -21,11 +23,31 @@ HTTP server will accept a single file per 'POST' request at '/scan' endpoint, an
 
 500 => Server error
 
-503 => The underlaying clamav is not alive, it can not scan file.
+503 => The underlaying clamav daemon is not alive, it can not scan file.
 
 
 ------------------------------------------------------------------------------------------------------------------
-Deploying to Bluemix:
+##Deploying to Bluemix:
+
+###Preconfig
+
+As we use custom buildpack, there are several building parameters can be configured through creating ".env" files at root directory.
+
+And each line of the file should be in format of "key=value", and where key and value match configurable parameters(see below table).
+
+| Service name   | configuration file name |           configurable parameters can be found below           |
+| -------------- | ----------------------- | -------------------------------------------------------------- |
+|    build       |      build.env          |            [see here](doc/BUILD)                               |
+| clamav daemon  |       clamd.env         | [see here](https://www.systutorials.com/docs/linux/man/5-freshclam.conf/)|
+| freshclam      |      freshclam.env      | [see here](https://www.systutorials.com/docs/linux/man/5-clamd.conf/)|
+
+*note: if duplicated key is specified, only the last key=value will be taken into effect
+
+####For example
+
+if you want to set up a private mirror, the file "freshclam.env" should contain a line "PrivateMirror=<your privated mirror IP>"
+
+### Deployment
 
 Please use command '$ cf push'
 
@@ -33,10 +55,11 @@ Clamav directory contains a pre-built binary of clamav program, when pushing to 
 
 1. push the clamav directory along with the source code, in that case, the pushed clamav program will be used(reducing build time of the deployemnt) .
 
-2. push without the clamav directory, at this stage, the buildpack will attemp to build clamav at build time.
+2. push without the clamav directory, at this stage, the buildpack will attemp to build clamav.
 
 Note* 
 
-The build time of 'cf push' might take a long time due to current CVD fetching stragegy.
+The build time of 'cf push' might take a long time due to CVD fetching from public mirror.
+(If take more than 5 minutes , please consider 'cf delete clam_cf', and issue 'cf push' again)
 
-If take more than 5 minutes , please consider 'cf delete clam_cf', and issue 'cf push' again
+Or to speed up the build time, you can have preconfigure freshclam to use a private mirror by having "freshclam.env".

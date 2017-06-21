@@ -1,0 +1,4 @@
+node_modules
+freshclam.properties
+clamd.properties
+npm-debug.log
