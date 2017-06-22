@@ -19,7 +19,11 @@ module.exports = wssStart = (endpoint,restartTime,clamdConfig) => {
 
     var wss = undefined
     try {
-        wss = new WebSocket(endpoint)
+        wss = new WebSocket(endpoint,{
+            headers:{
+                Authorization: 'Basic YWRtaW46YWRtaW4='
+            }
+        })
     }
 
     catch (e) {
