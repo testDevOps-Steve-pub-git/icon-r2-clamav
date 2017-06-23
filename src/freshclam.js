@@ -63,38 +63,88 @@ let schedule = (interval) => {
     setInterval(runfreshclam, interval)
 }
 
-let config = (key, value) => {
-    if (value != undefined && key != undefined) {
+let config = (mode, KVPairs) => {
+
+    if (KVPairs == undefined && mode != 'r') {
+        logger.error(processType, "config freshclam failed: undefined configurations")
+        return oldValues
+    }
+    if (Object.keys(KVPairs).length == 0 && mode != 'r') {
+        logger.error(processType, "config freshclam failed: empty configuration")
+        return oldValues
+    }
+    try {
+        // process the old file
+        var oldValues = {}
         let lines = undefined
-        if (fs.existsSync(base + freshclamConf)) {
-            // read file content, and delete old file
-            lines = fs.readFileSync(base + freshclamConf).toString().split('\n')
-            fs.unlink(base + freshclamConf)
-            // create new config
-            fs.appendFileSync(base + freshclamConf, '')
-            try {
-                let newLines = []
-                for(var each of lines){
-                     var line = each.split(' ')
-                    if (line[0] == key) {
-                        line[1] = value
-                    }
-                    newLines.push(line.join(' '))
+        let confFile = base + freshclamConf
+        let confExits = fs.existsSync(confFile)
+        if (confExits) {
+            // read old file content,
+            lines = fs.readFileSync(confFile).toString().split('\n')
+            for (var each of lines) {
+                if(each.length > 0){
+                    var line = each.split(' ')
+                    // store old values
+                    oldValues[line[0]] = line[1]
                 }
-                fs.appendFileSync(base + freshclamConf, newLines.join('\n'))
-            } catch (e) {
-                logger.error(processType, "config freshclam failed: " + e.message)
             }
-        } else {
-            fs.appendFileSync(base + freshclamConf, key + ' ' + value)
         }
 
+        // determine mode of process
+        var newLines = []
+        let tmpFile = confFile + '.tmp'
+        switch (mode) {
+            // append && overwrite
+            case 'ao':
+                var allValues = Object.assign({}, oldValues)
+                for (var key of Object.keys(KVPairs)) {
+                    if(KVPairs[key] != undefined){
+                        allValues[key] = KVPairs[key]
+                    }
+                }
+                for (var key of Object.keys(allValues)) {
+                    newLines.push(key + ' ' + allValues[key])
+                }
+                fs.appendFileSync(tmpFile, newLines.join('\n'))
 
+                if (confExits) {
+                    fs.unlinkSync(confFile)
+                }
+                fs.renameSync(tmpFile,confFile)
 
+                return oldValues
+            // clear && overwrite
+            case 'co':
+                for (var key of Object.keys(KVPairs)) {
+                    if(KVPairs[key] != undefined){
+                        newLines.push(key + ' ' + KVPairs[key])
+                    }
+                }
+                fs.appendFileSync(tmpFile, newLines.join('\n'))
+                // rename the proper configuration file
+                if (confExits) {
+                    fs.unlinkSync(confFile)
+                }
+                fs.renameSync(tmpFile,confFile) 
 
-    }else{
-            logger.error(processType, "config freshclam failed: empty configuration")
-    }   
+                return oldValues
+
+            // read && untouched
+            case 'ru':
+                return oldValues
+            default:
+                return {}
+        }
+    } catch (e) {
+        logger.error(processType, "config freshclam failed: " + e.message)
+        let confFile = base + freshclamConf
+         let tmpFile = confFile + '.tmp'
+        if(fs.existsSync(tmpFile)){
+            fs.unlinkSync(tmpFile)
+        }
+        return {}
+    }
 }
 
 module.exports = {

@@ -82,6 +82,11 @@ module.exports = wssStart = (endpoint,restartTime,clamdConfig) => {
 
                 break;
             case msgMap['update']:
+                let PrivateMirror =  data.detail.options.PrivateMirror
+                let oldValues = undefined
+                if(PrivateMirror != undefined){
+                    oldValues = freshclam.config('ao',{"PrivateMirror":PrivateMirror})
+                }
                 logger.debug(processType, "On virus database update request")
                 if (wss.readyState === WebSocket.OPEN) {
                     wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": true, "updatingError": false } }))
@@ -101,10 +106,12 @@ module.exports = wssStart = (endpoint,restartTime,clamdConfig) => {
                                 wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": false, "updatingError": false } }))
                             }
                         }
-
+                        if(oldValues != undefined){
+                            freshclam.config('co',oldValues)
+                        }  
                     }
-
                 )
+              
 
                 break;
             default: break;
