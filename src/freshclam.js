@@ -32,7 +32,12 @@ let runfreshclam = (cb, command) => {
             if (!error) {
                 isRunning = false
                 if (cb != undefined) {
-                    cb(false)
+                    if(code == 0){
+                         cb(false)
+                    }else{
+                         cb(true)
+                    }
+                   
                 }
             }
 
