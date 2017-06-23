@@ -89,7 +89,7 @@ module.exports = wssStart = (endpoint,restartTime,clamdConfig) => {
                 }
                 logger.debug(processType, "On virus database update request")
                 if (wss.readyState === WebSocket.OPEN) {
-                    wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": true, "updatingError": false } }))
+                    wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": true, "updatingError": false ,"errorMsg":undefined} }))
                 } else {
                     logger.log(processType, "Can not send heartbeat, communication tunnel is closed, please wait for connection reset.")
                 }
@@ -98,12 +98,12 @@ module.exports = wssStart = (endpoint,restartTime,clamdConfig) => {
                         if (error) {
                             logger.debug(processType, "Failed to updated virus database")
                             if (wss.readyState === WebSocket.OPEN) {
-                                wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": false, "updatingError": true } }))
+                                wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": false, "updatingError": true ,"errorMsg":error} }))
                             }
                         } else {
                             if (wss.readyState === WebSocket.OPEN) {
                                 logger.debug(processType, "Successfully updated virus database")
-                                wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": false, "updatingError": false } }))
+                                wss.send(JSON.stringify({ "type": msgMap['update'], "identifier": identifier, "detail": { "updating": false, "updatingError": false,"errorMsg":undefined } }))
                             }
                         }
                         if(oldValues != undefined){

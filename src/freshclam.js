@@ -18,7 +18,7 @@ let runfreshclam = (cb, command) => {
             isRunning = false
             error = true
             if (cb != undefined) {
-                cb(true)
+                cb("error updating: "+err.message)
             }
             logger.error(processType, "error creating freshclam, unable to get new virus definitions: " + err.message)
         })
@@ -33,9 +33,9 @@ let runfreshclam = (cb, command) => {
                 isRunning = false
                 if (cb != undefined) {
                     if(code == 0){
-                         cb(false)
+                        cb()
                     }else{
-                         cb(true)
+                         cb("Virus database updated unsuccessfully, exit code: " + code)
                     }
                    
                 }
@@ -55,7 +55,7 @@ let runfreshclam = (cb, command) => {
     } else {
         logger.error(processType, "Virus database process is already running")
         if (cb != undefined) {
-            cb(false)
+            cb("Virus database process is already running")
         }
     }
 
