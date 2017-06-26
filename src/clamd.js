@@ -1,5 +1,5 @@
 let logger = require('./logger.js')
-let base = '/home/vcap/app/clamav/'
+let base =  __dirname.replace('/src','') + '/clamav/'
 let clamdExec = 'sbin/clamd'
 let processType = 'Clamav daemon'
 let spawn = require('child_process').spawn

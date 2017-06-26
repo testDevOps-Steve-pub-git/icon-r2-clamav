@@ -195,7 +195,7 @@ if (!appEnv.isLocal) {
 
 // config first
 if (config.freshclam.private_mirror != undefined) {
-	freshclam.config('co',{'PrivateMirror':config.freshclam.private_mirror})
+	freshclam.config('ao',{'PrivateMirror':[config.freshclam.private_mirror]})
 	logger.log(processType, 'Configuring private mirror at: ' + config.freshclam.private_mirror)
 }
 // start  freshclam if enabled

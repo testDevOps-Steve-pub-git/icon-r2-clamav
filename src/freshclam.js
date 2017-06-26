@@ -1,6 +1,6 @@
 let logger = require('./logger.js')
 let processType = 'Virus Database Update'
-let base = '/home/vcap/app/clamav/'
+let base =  __dirname.replace('/src','') + '/clamav/'
 let freshclamExec = 'bin/freshclam'
 let freshclamConf = 'etc/freshclam.conf'
 let spawn = require('child_process').spawn
@@ -18,7 +18,7 @@ let runfreshclam = (cb, command) => {
             isRunning = false
             error = true
             if (cb != undefined) {
-                cb("error updating: "+err.message)
+                cb("error updating: " + err.message)
             }
             logger.error(processType, "error creating freshclam, unable to get new virus definitions: " + err.message)
         })
@@ -32,12 +32,12 @@ let runfreshclam = (cb, command) => {
             if (!error) {
                 isRunning = false
                 if (cb != undefined) {
-                    if(code == 0){
+                    if (code == 0) {
                         cb()
-                    }else{
-                         cb("Virus database updated unsuccessfully, exit code: " + code)
+                    } else {
+                        cb("Virus database updated unsuccessfully, exit code: " + code)
                     }
-                   
+
                 }
             }
 
@@ -69,7 +69,7 @@ let schedule = (interval) => {
 }
 
 let config = (mode, KVPairs) => {
-
+    let multipleKeys = ['DatabaseCustomURL','DatabaseMirror','PrivateMirror','ExtraDatabase']
     if (KVPairs == undefined && mode != 'r') {
         logger.error(processType, "config freshclam failed: undefined configurations")
         return oldValues
@@ -81,6 +81,10 @@ let config = (mode, KVPairs) => {
     try {
         // process the old file
         var oldValues = {}
+        // multiple value for these values
+        for (var key of multipleKeys){
+             oldValues[key] = []
+        }
         let lines = undefined
         let confFile = base + freshclamConf
         let confExits = fs.existsSync(confFile)
@@ -88,10 +92,15 @@ let config = (mode, KVPairs) => {
             // read old file content,
             lines = fs.readFileSync(confFile).toString().split('\n')
             for (var each of lines) {
-                if(each.length > 0){
+                if (each.length > 0) {
                     var line = each.split(' ')
                     // store old values
-                    oldValues[line[0]] = line[1]
+                    if (multipleKeys.indexOf(line[0]) > 0) {
+                        oldValues[line[0]].push(line[1])
+                    } else {
+                        oldValues[line[0]] = line[1]
+                    }
+
                 }
             }
         }
@@ -102,28 +111,48 @@ let config = (mode, KVPairs) => {
         switch (mode) {
             // append && overwrite
             case 'ao':
-                var allValues = Object.assign({}, oldValues)
+                var allValues = JSON.parse(JSON.stringify(oldValues))
+                console.log(allValues)
                 for (var key of Object.keys(KVPairs)) {
-                    if(KVPairs[key] != undefined){
-                        allValues[key] = KVPairs[key]
+                    if (KVPairs[key] != undefined) {
+                        if (multipleKeys.indexOf(key) >= 0) {
+                            for(var each of KVPairs[key]){
+                                  allValues[key].push(each)
+                            }   
+                        } else {
+                            allValues[key] = KVPairs[key]
+                        }
                     }
                 }
                 for (var key of Object.keys(allValues)) {
-                    newLines.push(key + ' ' + allValues[key])
+                    if (multipleKeys.indexOf(key) >= 0) {
+                        for (var each of allValues[key]) {
+                            newLines.push(key + ' ' + each)
+                        }
+                    } else {
+                        newLines.push(key + ' ' + allValues[key])
+                    }
+
                 }
                 fs.appendFileSync(tmpFile, newLines.join('\n'))
 
                 if (confExits) {
                     fs.unlinkSync(confFile)
                 }
-                fs.renameSync(tmpFile,confFile)
+                fs.renameSync(tmpFile, confFile)
 
                 return oldValues
             // clear && overwrite
             case 'co':
                 for (var key of Object.keys(KVPairs)) {
-                    if(KVPairs[key] != undefined){
-                        newLines.push(key + ' ' + KVPairs[key])
+                    if (KVPairs[key] != undefined) {
+                        if (multipleKeys.indexOf(key) >= 0) {
+                            for (var each of KVPairs[key]) {
+                                newLines.push(key + ' ' + each)
+                            }
+                        } else {
+                            newLines.push(key + ' ' + KVPairs[key])
+                        }
                     }
                 }
                 fs.appendFileSync(tmpFile, newLines.join('\n'))
@@ -131,7 +160,7 @@ let config = (mode, KVPairs) => {
                 if (confExits) {
                     fs.unlinkSync(confFile)
                 }
-                fs.renameSync(tmpFile,confFile) 
+                fs.renameSync(tmpFile, confFile)
 
                 return oldValues
 
@@ -144,8 +173,8 @@ let config = (mode, KVPairs) => {
     } catch (e) {
         logger.error(processType, "config freshclam failed: " + e.message)
         let confFile = base + freshclamConf
-         let tmpFile = confFile + '.tmp'
-        if(fs.existsSync(tmpFile)){
+        let tmpFile = confFile + '.tmp'
+        if (fs.existsSync(tmpFile)) {
             fs.unlinkSync(tmpFile)
         }
         return {}

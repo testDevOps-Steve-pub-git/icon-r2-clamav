@@ -7,7 +7,7 @@ var cfenv = require('cfenv'),
     clamd = require('./clamd.js'),
     identifier = {
         application_id: appEnv.app.application_id, application_name: appEnv.app.application_name,
-        application_urls: appEnv.app.application_urls, instance_index: appEnv.app.instance_index,
+        application_uris: appEnv.app.application_uris, instance_index: appEnv.app.instance_index,
         instance_id: appEnv.app.instance_id
     }
 
@@ -85,7 +85,7 @@ module.exports = wssStart = (endpoint,restartTime,clamdConfig) => {
                 let PrivateMirror =  data.detail.options.PrivateMirror
                 let oldValues = undefined
                 if(PrivateMirror != undefined){
-                    oldValues = freshclam.config('ao',{"PrivateMirror":PrivateMirror})
+                    oldValues = freshclam.config('ao',{"PrivateMirror":[PrivateMirror]})
                 }
                 logger.debug(processType, "On virus database update request")
                 if (wss.readyState === WebSocket.OPEN) {
