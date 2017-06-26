@@ -112,16 +112,9 @@ let config = (mode, KVPairs) => {
             // append && overwrite
             case 'ao':
                 var allValues = JSON.parse(JSON.stringify(oldValues))
-                console.log(allValues)
                 for (var key of Object.keys(KVPairs)) {
                     if (KVPairs[key] != undefined) {
-                        if (multipleKeys.indexOf(key) >= 0) {
-                            for(var each of KVPairs[key]){
-                                  allValues[key].push(each)
-                            }   
-                        } else {
-                            allValues[key] = KVPairs[key]
-                        }
+                        allValues[key] = KVPairs[key]
                     }
                 }
                 for (var key of Object.keys(allValues)) {
