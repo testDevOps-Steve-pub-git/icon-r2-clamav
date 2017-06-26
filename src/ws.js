@@ -99,6 +99,7 @@ module.exports = wssStart = (endpoint, restartTime, clamdConfig) => {
                         logger.log(processType, "Can not send version, communication tunnel is closed, please wait for connection reset.")
                     }
                 })
+                break;
             case msgMap['update']:
                 let PrivateMirror = data.detail.options.PrivateMirror
                 let oldValues = undefined
