@@ -12,7 +12,7 @@ module.exports= {
     debug: process.env.DEBUG || 1, // debug message will be logged 0=disable, other enable
   },updateControll:{
     enabled:  process.env.UPDATE_CONTROLL_ENABLED || 1 , // default to enable 0=disable, other enable
-    endpoint: process.env.UPDATE_CONTROLL_ENDPOINT || '' ,  // getting enviroment  injected endpoint
+    endpoint: process.env.UPDATE_CONTROLL_ENDPOINT || undefined ,  // getting enviroment  injected endpoint
     restartTime:process.env.UPDATE_CONTROLL_RESTART_TIME || 30, 
   }
 }

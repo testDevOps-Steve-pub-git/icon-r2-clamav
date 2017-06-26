@@ -49,10 +49,10 @@ var ping = (port,endpoint,timeout) => {
 		clamav.ping(port,endpoint,timeout, (err) => {
 			if (err) {
 				logger.error(processType, "Cant not reach clamav deamon: " + err)
-				reject("{'message': 'Cant not reach clamav deamon:" + err + "'}")
+				reject(err)
 			} else {
 				logger.debug(processType, "Ping clamav daemon with health state")
-				resolve("{ 'message': 'Clamav daemon is alive '}")
+				resolve()
 			}
 		})
 	})
@@ -65,10 +65,10 @@ var version = (port,endpoint,timeout) => {
 		clamav.version(port, endpoint, timeout, (err, version) => {
 			if (err) {
 				logger.error(processType, "Cant not reach clamav deamon: " + err)
-				reject("{'message': 'Cant not reach clamav deamon:" + err + "'}")
+				reject(err)
 			} else {
 				logger.debug(processType, 'Got virus database version: ' + version)
-				resolve("{'message':'clamav deamon virus database version is " + version + "'}")
+				resolve(version)
 			}
 		}
 		)
@@ -84,13 +84,13 @@ var scan = (port,endpoint,each) => {
 
 			if (err) {
 				logger.error(processType, 'Encounter error while scanning ' + each.filename + ', ' + err)
-				reject({ 'result': '' + err, "code": 400 })
+				reject(err)
 			} else if (malicious) {
 				logger.log(processType, 'Encounter virus: ' + malicious + ', while scanning ' + each.filename)
-				resolve({ 'result': malicious + " found in file: " + each.filename, "code": 406 })
+				resolve(malicious)
 			} else {
 				logger.log(processType, "No virus found while scanning: " + each.filename)
-				resolve({ 'result': "No virus found in the file: " + each.filename, "code": 200 })
+				resolve()
 			}
 
 		})

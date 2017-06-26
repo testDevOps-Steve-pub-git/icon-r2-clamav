@@ -11,7 +11,9 @@ var http = require('http'),
 	appEnv = cfenv.getAppEnv();
 wssStart = require('./ws.js')
 
-
+let responseDispatch = (msg) => {
+	return JSON.stringify({ "message": msg.toString() })
+}
 
 // main http server 
 var server = http.createServer((request, response) => {
@@ -36,25 +38,25 @@ var server = http.createServer((request, response) => {
 		clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then(
 			(result) => {
 				response.writeHead(200, { 'Content-Type': 'application/json' });
-				response.write(result)
+				response.write(responseDispatch("clamav daemon is alive"))
 				response.end();
 
 			}, (reason) => {
 				response.writeHead(503, { 'Content-Type': 'application/json' })
-				response.write(reason)
+				response.write(responseDispatch(reason))
 				response.end()
 			}
 		)
 	}
 	else if (request.url === '/version' && request.method === 'GET') {
 		logger.debug(processType, "Version check request was submitted, processing .....")
-		clamd.version(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
+		clamd.version(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((version) => {
 			response.writeHead(200, { 'Content-Type': 'application/json' });
-			response.write(result)
+			response.write(responseDispatch(version))
 			response.end();
 		}, (reason) => {
 			response.writeHead(503, { 'Content-Type': 'application/json' })
-			response.write(reason)
+			response.write(responseDispatch(reason))
 			response.end()
 		})
 	}
@@ -70,9 +72,7 @@ var server = http.createServer((request, response) => {
 			response.end();
 
 		});
-
 		clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
-
 			var busboy = new Busboy({ 'headers': request.headers, limits: { files: 1 } });
 			busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
 				temp = fileDir + '/' + guid.raw()
@@ -85,26 +85,29 @@ var server = http.createServer((request, response) => {
 					if (fs.existsSync(temp)) {
 						hasFile = true
 						logger.debug(processType, "got file:" + filename + ", saved into " + temp)
-						clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
-							clamd.scan(config.clamd.port, config.clamd.endPoint, { "filename": filename, "filepath": temp }).then(result => {
-								fs.unlinkSync(temp)
-								response.writeHead(result.code, { 'Content-Type': 'application/json' });
-								response.write(JSON.stringify({ message: result.result }))
-								response.end()
-							}, reason => {
-								fs.unlinkSync(temp)
-								response.writeHead(reason.code, { 'Content-Type': 'application/json' });
-								response.write(JSON.stringify({ message: reason.result }))
-								response.end()
-							})
-						}, (reason) => {
+						clamd.scan(config.clamd.port, config.clamd.endPoint, { "filename": filename, "filepath": temp }).then(result => {
 							fs.unlinkSync(temp)
-							response.writeHead(503, { 'Content-Type': 'application/json' });
-							response.write(reason)
+
+							if (result) {
+								response.writeHead(406, { 'Content-Type': 'application/json' });
+								response.write(responseDispatch(result))
+							} else {
+								response.writeHead(200, { 'Content-Type': 'application/json' });
+								response.write(responseDispatch("No virus found"))
+							}
+
 							response.end()
-
-
+						}, reason => {
+							fs.unlinkSync(temp)
+							if (reason.code == 'ECONNREFUSED') {
+								response.writeHead(503, { 'Content-Type': 'application/json' });
+							} else {
+								response.writeHead(400, { 'Content-Type': 'application/json' });
+							}
+							response.write(responseDispatch(reason))
+							response.end()
 						})
+
 					}
 
 				})
@@ -117,7 +120,7 @@ var server = http.createServer((request, response) => {
 				if (!hasFile) {
 					logger.error(processType, 'No file was submiited for scanning - bad request');
 					response.writeHead(400, { 'Content-Type': 'application/json' });
-					response.write("{messege:'no file was submitted'}")
+					response.write(responseDispatch("no file was submitted"))
 					response.end()
 				} else {
 					logger.debug(processType, 'done parse file');
@@ -125,12 +128,12 @@ var server = http.createServer((request, response) => {
 
 			});
 			request.pipe(busboy)
+
 		}, (reason) => {
 			response.writeHead(503, { 'Content-Type': 'application/json' });
-			response.write(reason)
+			response.write(responseDispatch(reason))
 			response.end()
 		})
-
 
 
 
@@ -195,7 +198,7 @@ if (!appEnv.isLocal) {
 
 // config first
 if (config.freshclam.private_mirror != undefined) {
-	freshclam.config('ao',{'PrivateMirror':[config.freshclam.private_mirror]})
+	freshclam.config('ao', { 'PrivateMirror': [config.freshclam.private_mirror] })
 	logger.log(processType, 'Configuring private mirror at: ' + config.freshclam.private_mirror)
 }
 // start  freshclam if enabled
