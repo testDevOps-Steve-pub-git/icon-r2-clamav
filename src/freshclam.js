@@ -6,8 +6,7 @@ let freshclamConf = 'etc/freshclam.conf'
 let spawn = require('child_process').spawn
 let fs = require('fs')
 var isRunning = false
-var freshclamTimer = undefined
-let runfreshclam = (cb, command) => {
+let runfreshclam = (cb) => {
     if (!isRunning) {
         logger.log(processType, 'Start update virus database')
         let freshclam = spawn(base + freshclamExec, ['--daemon-notify=' + base + 'etc/clamd.conf'])
@@ -65,7 +64,10 @@ let runfreshclam = (cb, command) => {
 
 let schedule = (interval) => {
     // schedule freshclam
-    freshclamTimer = setInterval(runfreshclam, interval)
+    setInterval(()=>{
+        runfreshclam()
+    },interval).unref()
+    
 }
 
 let config = (mode, KVPairs) => {
@@ -179,20 +181,3 @@ module.exports = {
     run: runfreshclam,
     config: config
 }
-
-
-let exitHandler = (e)=>{
-    if(freshclamTimer != undefined){
-         clearInterval(freshclamTimer)
-    }
- 
-  logger.log(processType, "Freshclam scheduling process exit.") 
-  if(e){
-    logger.error(processType,e.message)
-  }
-   process.exit(0)
-}
-
-process.on('exit',exitHandler)
-
-process.on('uncaughtException',exitHandler)
