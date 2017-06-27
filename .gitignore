@@ -1,4 +1,5 @@
 node_modules
-freshclam.properties
-clamd.properties
+freshclam.env
+clamd.env
+build.env
 npm-debug.log
