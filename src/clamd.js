@@ -4,6 +4,7 @@ let clamdExec = 'sbin/clamd'
 let processType = 'Clamav daemon'
 let spawn = require('child_process').spawn
 let clamav = require('clamav.js')
+let clamdTimer = undefined
 
 // clamav deamon initialization
 var clamdStart = (endpoint,restartTime,restart) =>{
@@ -16,7 +17,7 @@ var clamdStart = (endpoint,restartTime,restart) =>{
     clamd.on('error', (error) => {
         logger.error(processType, "error initializing clamav deamon: " + error + ' - retry in ' + restartTime + ' seconds')
 		error = true
-		setInterval(()=>{
+		clamdTimer = setTimeout(()=>{
 				clamdStart(endpoint,restartTime,true)
 		},restartTime * 1000) 
     })
@@ -24,7 +25,7 @@ var clamdStart = (endpoint,restartTime,restart) =>{
         logger.error(processType, "clamav daemon exited  with code " + code)
 		logger.log(processType,"Restarting clamav daemon in " + restartTime + " seconds")
         if(!error){
-			setInterval(()=>{
+			clamdTimer = setTimeout(()=>{
 				clamdStart(endpoint,restartTime,true)
 			},restartTime * 1000) 
 		}
@@ -107,3 +108,20 @@ module.exports = {
     scan:scan
  
 }
+
+
+let exitHandler = (e)=>{
+    if(clamdTimer != undefined){
+         clearTimeout(clamdTimer)
+    }
+ 
+  logger.log(processType, "clamav daemon process exit.") 
+  if(e){
+    logger.error(processType,e)
+  }
+}
+process.on('SIGINT',exitHandler)
+
+process.on('exit',exitHandler)
+
+process.on('uncaughtException',exitHandler)

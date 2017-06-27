@@ -9,8 +9,8 @@ var cfenv = require('cfenv'),
         application_id: appEnv.app.application_id, application_name: appEnv.app.application_name,
         application_uris: appEnv.app.application_uris, instance_index: appEnv.app.instance_index,
         instance_id: appEnv.app.instance_id
-    }
-
+    },
+    wsTimer = undefined;
 
 
 
@@ -31,7 +31,7 @@ module.exports = wssStart = (endpoint, restartTime, clamdConfig) => {
     catch (e) {
         logger.error(processType, "Connection to updated server failed: " + e.message)
         logger.log(processType, "Connection to Virus Update will be re-established in " + restartTime + " seconds ")
-        setTimeout(() => {
+        wsTimer = setTimeout(() => {
             wssStart(endpoint, restartTime, clamdConfig)
         }, restartTime * 1000)
     }
@@ -50,7 +50,7 @@ module.exports = wssStart = (endpoint, restartTime, clamdConfig) => {
     }
     wss.onclose = (event) => {
         logger.log(processType, "Connection to Virus Update Controll is closed. It will be re-established in " + restartTime + " seconds ")
-        setTimeout(() => {
+        wsTimer = setTimeout(() => {
             wssStart(endpoint, restartTime, clamdConfig)
         }, restartTime * 1000)
     }
@@ -139,3 +139,21 @@ module.exports = wssStart = (endpoint, restartTime, clamdConfig) => {
     })
 
 }
+
+
+
+let exitHandler = (e)=>{
+    if(wsTimer != undefined){
+         clearTimeout(wsTimer)
+    }
+ 
+  logger.log(processType, "Update controll process exit.") 
+  if(e){
+    logger.error(processType,e)
+  }
+}
+process.on('SIGINT',exitHandler)
+
+process.on('exit',exitHandler)
+
+process.on('uncaughtException',exitHandler)
