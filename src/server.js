@@ -30,7 +30,7 @@ var server = http.createServer((request, response) => {
 	else if (request.url === '/' && request.method === 'GET') {
 		logger.debug(processType, "Health check of server")
 		response.writeHead(200, { 'Content-Type': 'application/json' });
-		response.write("{'message':'server is alive'}")
+		response.write(responseDispatch('Server is alive'))
 		response.end();
 	}
 	else if (request.url === '/ping' && request.method === 'GET') {
@@ -66,7 +66,9 @@ var server = http.createServer((request, response) => {
 		request.on('close', function () {
 			logger.error(processType, "client unexpectedly drop connection")
 			if (temp != undefined) {
-				fs.unlinkSync(temp)
+				if(fs.existsSync(temp)){
+					fs.unlinkSync(temp)
+				}
 			}
 			response.writeHead(400);
 			response.end();
@@ -120,7 +122,7 @@ var server = http.createServer((request, response) => {
 				if (!hasFile) {
 					logger.error(processType, 'No file was submiited for scanning - bad request');
 					response.writeHead(400, { 'Content-Type': 'application/json' });
-					response.write(responseDispatch("no file was submitted"))
+					response.write(responseDispatch("no file was submitted or file has no length"))
 					response.end()
 				} else {
 					logger.debug(processType, 'done parse file');
