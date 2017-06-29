@@ -119,7 +119,7 @@ var server = http.createServer((request, response) => {
 					if(hasFile){
 						fs.unlinkSync(temp)	
 					}else{
-						logger.debug(processType,"Tmp file did not get created successfully. ")
+						logger.debug(processType,"Tmp file did not get created successfully for scanning. ")
 					}
 					if(!connected){
 						logger.debug(processType,"Connection is aborted, will not process file ")
@@ -129,7 +129,7 @@ var server = http.createServer((request, response) => {
 		});
 
 		busboy.on('finish', function () {
-			if (!hasFile) {
+			if (!hasFile && connected) {
 				logger.error(processType, 'No file was submiited for scanning - bad request');
 				response.writeHead(400, { 'Content-Type': 'application/json' });
 				response.write(responseDispatch("no file was submitted or file has no length"))
