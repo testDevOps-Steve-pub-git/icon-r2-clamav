@@ -61,76 +61,88 @@ var server = http.createServer((request, response) => {
 		})
 	}
 	else if (request.url === '/scan' && request.method === 'POST') {
-		var temp = undefined
+		// handling request and respons part of HTTP
 		logger.debug(processType, "Scanning request was submitted, processing .....")
-		request.on('close', function () {
+		request.on('close', ()=> {
+			connected = false
 			logger.error(processType, "client unexpectedly drop connection")
-			if (temp != undefined) {
-				if(fs.existsSync(temp)){
-					fs.unlinkSync(temp)
-				}
-			}
 			response.writeHead(400);
 			response.end();
 
 		});
-		clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
-			var busboy = new Busboy({ 'headers': request.headers, limits: { files: 1 } });
-			busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
-				temp = fileDir + '/' + guid.raw()
-				file.on('data', (data) => {
-					fs.appendFileSync(temp, data)
-				})
+		request.on('error', (err)=>{
+			logger.error(processType,"Request getting error: " + err.message.toString())
+			response.writeHead(400);
+			response.end();
+		})
+		response.on('error',(err)=>{
+			logger.error(processType,"Response error: " + err.message.toString())
+		})
 
+		// process the real message 
+		var temp = fileDir + '/' + guid.raw()
+		var hasFile = false
+		var connected = true
+		var busboy = new Busboy({ 'headers': request.headers, limits: { files: 1 } });
+		busboy.on('file', function (fieldname, file, filename, encoding, mimetype) {
+		
+			file.pipe(fs.createWriteStream(temp))
+			logger.debug(processType, "got file:" + filename + ", piping into " + temp)
 
-				file.on('end', () => {
-					if (fs.existsSync(temp)) {
-						hasFile = true
-						logger.debug(processType, "got file:" + filename + ", saved into " + temp)
-						clamd.scan(config.clamd.port, config.clamd.endPoint, { "filename": filename, "filepath": temp }).then(result => {
-							fs.unlinkSync(temp)
+			file.on('end', () => {
+				hasFile = fs.existsSync(temp)
+				if (connected && hasFile) {
+					clamd.scan(config.clamd.port, config.clamd.endPoint, { "filename": filename, "filepath": temp }).then(result => {
+						
+						fs.unlinkSync(temp)
 
-							if (result) {
-								response.writeHead(406, { 'Content-Type': 'application/json' });
-								response.write(responseDispatch(result))
-							} else {
-								response.writeHead(200, { 'Content-Type': 'application/json' });
-								response.write(responseDispatch("No virus found"))
-							}
+						if (result) {
+							response.writeHead(406, { 'Content-Type': 'application/json' });
+							response.write(responseDispatch(result))
+						} else {
+							response.writeHead(200, { 'Content-Type': 'application/json' });
+							response.write(responseDispatch("No virus found"))
+						}
 
-							response.end()
-						}, reason => {
-							fs.unlinkSync(temp)
-							if (reason.code == 'ECONNREFUSED') {
-								response.writeHead(503, { 'Content-Type': 'application/json' });
-							} else {
-								response.writeHead(400, { 'Content-Type': 'application/json' });
-							}
-							response.write(responseDispatch(reason))
-							response.end()
-						})
-
+						response.end()
+					}, reason => {
+						fs.unlinkSync(temp)
+						if (reason.code == 'ECONNREFUSED') {
+							response.writeHead(503, { 'Content-Type': 'application/json' });
+						} else {
+							response.writeHead(400, { 'Content-Type': 'application/json' });
+						}
+						response.write(responseDispatch(reason))
+						response.end()
+					})
+				}else{
+					if(hasFile){
+						fs.unlinkSync(temp)	
+					}else{
+						logger.debug(processType,"Tmp file did not get created successfully. ")
 					}
-
-				})
-
-
-
-			});
-
-			busboy.on('finish', function () {
-				if (!hasFile) {
-					logger.error(processType, 'No file was submiited for scanning - bad request');
-					response.writeHead(400, { 'Content-Type': 'application/json' });
-					response.write(responseDispatch("no file was submitted or file has no length"))
-					response.end()
-				} else {
-					logger.debug(processType, 'done parse file');
+					if(!connected){
+						logger.debug(processType,"Connection is aborted, will not process file ")
+					}
 				}
+			})
+		});
 
-			});
+		busboy.on('finish', function () {
+			if (!hasFile) {
+				logger.error(processType, 'No file was submiited for scanning - bad request');
+				response.writeHead(400, { 'Content-Type': 'application/json' });
+				response.write(responseDispatch("no file was submitted or file has no length"))
+				response.end()
+			} else {
+				logger.debug(processType, 'done parse file');
+			}
+
+		});
+
+		// try to test clamav availability before scanning
+		clamd.ping(config.clamd.port, config.clamd.endPoint, config.clamd.timeout).then((result) => {
 			request.pipe(busboy)
-
 		}, (reason) => {
 			response.writeHead(503, { 'Content-Type': 'application/json' });
 			response.write(responseDispatch(reason))
@@ -139,12 +151,10 @@ var server = http.createServer((request, response) => {
 
 
 
-	} else if (request.url === '/scan' && request.method === 'GET') {
-
-		if (scan_html != undefined) {
-			response.writeHead(200, { 'Content-Type': 'text/html' });
-			response.write(scan_html)
-			response.end()
+	} else if (request.url === '/scan' && request.method === 'GET' && config.server.debug) {
+		let scanFile = './src/scan.html'
+		if (fs.existsSync(scanFile)) {
+			fs.createReadStream(scanFile).pipe(response)
 
 		} else {
 			response.writeHead(200, { 'Content-Type': 'text/html' });
@@ -158,17 +168,6 @@ var server = http.createServer((request, response) => {
 });
 
 
-// pre-process scanning sample html
-var scan_html = undefined
-fs.readFile('./src/scan.html', (err, data) => {
-	if (err) {
-		logger.log(processType, 'Missing scan html page, client will not be able to get sample scanning page')
-	} else {
-		logger.debug(processType, 'Sample scan html page processed completed')
-		scan_html = data
-	}
-
-})
 // temp directory for files
 var fileDir = '/tmp/files'
 if (!fs.existsSync(fileDir)) {
