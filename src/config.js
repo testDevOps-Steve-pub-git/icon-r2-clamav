@@ -5,7 +5,7 @@ module.exports= {
     timeout: process.env.CLAMAV_TIMEOUT || 10000, // 10s before considering it a failed attempt
     restartCounter:process.env.RESTART_COUNTER || 10
   },freshclam:{
-    mode: process.env.FRESHCLAM_MODE || 0,
+    mode: process.env.FRESHCLAM_MODE || 1,
     interval:process.env.FRESHCLAMV_INTERVAL || '3600000'
   },server:{
     port:process.env.SERVER_PORT || 8080
