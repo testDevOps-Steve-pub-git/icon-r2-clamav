@@ -3,7 +3,7 @@ path: ../
 memory: 1024M
 instances: 1
 disk_quota: 1024M
-buildpack: https://github.com/Shifeng-ON/nodejs-buildpack.git
+buildpack: https://github.com/testDevOps-Steve-pub-git/nodejs-buildpack.git
 env:
   TZ: 'America/Toronto'
 applications:
